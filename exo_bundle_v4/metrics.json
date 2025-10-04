@@ -1,0 +1,1216 @@
+{
+  "blend_metrics": {
+    "tag": "blend",
+    "oof_pr_auc": 0.9080015207503678,
+    "oof_brier": 0.045466050813159575,
+    "recommended_threshold": 0.5181521284039557,
+    "f1_at_threshold": 0.8188376207976045,
+    "recall_at_threshold": 0.8397543271915131,
+    "tri_class_accuracy": 0.7987199397618712,
+    "binary_accuracy_planet_vs_not": 0.9373617582003859,
+    "per_mission_thresholds": {}
+  },
+  "meta_metrics": {
+    "tag": "meta",
+    "oof_pr_auc": 0.9083833973004036,
+    "oof_brier": 0.04469030197117622,
+    "recommended_threshold": 0.3901079172181977,
+    "f1_at_threshold": 0.8195161728730633,
+    "recall_at_threshold": 0.8417085427135679,
+    "tri_class_accuracy": 0.818297331639136,
+    "binary_accuracy_planet_vs_not": 0.9375029413148854,
+    "per_mission_thresholds": {}
+  },
+  "n_folds": 5,
+  "class_weights": {
+    "0": 1.1006993006993007,
+    "1": 0.6306089743589743,
+    "2": 1.9773869346733668
+  },
+  "feature_importance_A_top20": [
+    {
+      "feature": "mag_kepler",
+      "fold1_seed1": 139000.68557786942,
+      "fold1_seed2": 129268.91554927826,
+      "fold1_seed3": 145571.39816951752,
+      "fold2_seed1": 147012.9659690857,
+      "fold2_seed2": 150620.88127613068,
+      "fold2_seed3": 131634.3364071846,
+      "fold3_seed1": 149751.13220500946,
+      "fold3_seed2": 149137.57211732864,
+      "fold3_seed3": 148315.25001716614,
+      "fold4_seed1": 147318.51617765427,
+      "fold4_seed2": 144675.25101947784,
+      "fold4_seed3": 139880.55984067917,
+      "fold5_seed1": 140411.88339233398,
+      "fold5_seed2": 131650.46315050125,
+      "fold5_seed3": 134857.75639629364,
+      "avg_gain": 141940.50448436738
+    },
+    {
+      "feature": "star_multiplicity",
+      "fold1_seed1": 112047.65735125542,
+      "fold1_seed2": 114570.40458345413,
+      "fold1_seed3": 111265.2324039936,
+      "fold2_seed1": 31294.087327957153,
+      "fold2_seed2": 36653.215341448784,
+      "fold2_seed3": 36107.865161418915,
+      "fold3_seed1": 62116.77783823013,
+      "fold3_seed2": 40602.689267635345,
+      "fold3_seed3": 41640.36645269394,
+      "fold4_seed1": 67376.05410957336,
+      "fold4_seed2": 86185.54350268841,
+      "fold4_seed3": 64604.982239842415,
+      "fold5_seed1": 47131.65164780617,
+      "fold5_seed2": 52026.451501727104,
+      "fold5_seed3": 42312.59195637703,
+      "avg_gain": 63062.37137907346
+    },
+    {
+      "feature": "snr_like__rank_in_star",
+      "fold1_seed1": 21484.728295326233,
+      "fold1_seed2": 24870.63147354126,
+      "fold1_seed3": 19049.661600112915,
+      "fold2_seed1": 63232.26873612404,
+      "fold2_seed2": 57330.442783117294,
+      "fold2_seed3": 65732.91651833057,
+      "fold3_seed1": 43866.33315896988,
+      "fold3_seed2": 32391.454747915268,
+      "fold3_seed3": 66166.45075893402,
+      "fold4_seed1": 51808.65239572525,
+      "fold4_seed2": 41949.4706094265,
+      "fold4_seed3": 62459.30698513985,
+      "fold5_seed1": 73223.91850686073,
+      "fold5_seed2": 73935.54234981537,
+      "fold5_seed3": 67530.97290086746,
+      "avg_gain": 51002.183454680446
+    },
+    {
+      "feature": "prad_errw",
+      "fold1_seed1": 36241.68082880974,
+      "fold1_seed2": 33142.59772324562,
+      "fold1_seed3": 32765.34604716301,
+      "fold2_seed1": 35713.20295834541,
+      "fold2_seed2": 34910.54896855354,
+      "fold2_seed3": 31776.80081319809,
+      "fold3_seed1": 29868.141623973846,
+      "fold3_seed2": 28917.99669802189,
+      "fold3_seed3": 29504.970544815063,
+      "fold4_seed1": 31567.233796834946,
+      "fold4_seed2": 34885.5048661232,
+      "fold4_seed3": 35041.885930895805,
+      "fold5_seed1": 33467.73756670952,
+      "fold5_seed2": 33845.161308050156,
+      "fold5_seed3": 33128.11220526695,
+      "avg_gain": 32985.12812533379
+    },
+    {
+      "feature": "depth_ppm__rank_in_star",
+      "fold1_seed1": 12016.485843658447,
+      "fold1_seed2": 10179.696863651276,
+      "fold1_seed3": 15358.20688199997,
+      "fold2_seed1": 44824.98294329643,
+      "fold2_seed2": 44763.00714278221,
+      "fold2_seed3": 41888.01349949837,
+      "fold3_seed1": 31239.514082193375,
+      "fold3_seed2": 64993.43467116356,
+      "fold3_seed3": 29737.025059223175,
+      "fold4_seed1": 22219.88645362854,
+      "fold4_seed2": 18116.140756249428,
+      "fold4_seed3": 18488.64411354065,
+      "fold5_seed1": 20223.262325167656,
+      "fold5_seed2": 17212.73578262329,
+      "fold5_seed3": 25398.292291879654,
+      "avg_gain": 27777.288580703735
+    },
+    {
+      "feature": "duration_errw",
+      "fold1_seed1": 15169.780294656754,
+      "fold1_seed2": 14306.634843349457,
+      "fold1_seed3": 15248.801453351974,
+      "fold2_seed1": 14840.557819843292,
+      "fold2_seed2": 16237.218792200089,
+      "fold2_seed3": 14466.892791509628,
+      "fold3_seed1": 13283.12101817131,
+      "fold3_seed2": 13803.742148160934,
+      "fold3_seed3": 13809.551650047302,
+      "fold4_seed1": 14233.988567352295,
+      "fold4_seed2": 14542.897378206253,
+      "fold4_seed3": 14844.694674491882,
+      "fold5_seed1": 13559.234535813332,
+      "fold5_seed2": 15487.086244344711,
+      "fold5_seed3": 14896.355685710907,
+      "avg_gain": 14582.037193147342
+    },
+    {
+      "feature": "mag_tess",
+      "fold1_seed1": 15016.525833368301,
+      "fold1_seed2": 15325.446758508682,
+      "fold1_seed3": 14844.74166727066,
+      "fold2_seed1": 14594.038591623306,
+      "fold2_seed2": 14989.437596321106,
+      "fold2_seed3": 14980.703397035599,
+      "fold3_seed1": 13147.272122383118,
+      "fold3_seed2": 14425.58464050293,
+      "fold3_seed3": 13260.711352348328,
+      "fold4_seed1": 13433.698341608047,
+      "fold4_seed2": 13878.688878297806,
+      "fold4_seed3": 15129.998983383179,
+      "fold5_seed1": 14478.377210259438,
+      "fold5_seed2": 14881.594209432602,
+      "fold5_seed3": 14580.274072647095,
+      "avg_gain": 14464.472910332679
+    },
+    {
+      "feature": "mag_kepler__missing",
+      "fold1_seed1": 12920.331107378006,
+      "fold1_seed2": 13914.100786685944,
+      "fold1_seed3": 6310.500621795654,
+      "fold2_seed1": 8403.130213975906,
+      "fold2_seed2": 4823.970921397209,
+      "fold2_seed3": 14098.019285082817,
+      "fold3_seed1": 12493.220710754395,
+      "fold3_seed2": 12666.803655147552,
+      "fold3_seed3": 13210.484386444092,
+      "fold4_seed1": 8282.958325862885,
+      "fold4_seed2": 6163.485937595367,
+      "fold4_seed3": 12703.69497179985,
+      "fold5_seed1": 9239.416620850563,
+      "fold5_seed2": 17699.323889255524,
+      "fold5_seed3": 25338.582006454468,
+      "avg_gain": 11884.534896032015
+    },
+    {
+      "feature": "teff_errw",
+      "fold1_seed1": 8778.991064310074,
+      "fold1_seed2": 9573.495036840439,
+      "fold1_seed3": 8992.165476799011,
+      "fold2_seed1": 9389.195480108261,
+      "fold2_seed2": 9326.590047121048,
+      "fold2_seed3": 10160.064267158508,
+      "fold3_seed1": 10019.810290813446,
+      "fold3_seed2": 9390.157771110535,
+      "fold3_seed3": 8018.216700553894,
+      "fold4_seed1": 10851.53678226471,
+      "fold4_seed2": 11969.247767806053,
+      "fold4_seed3": 12608.398118495941,
+      "fold5_seed1": 10847.986537456512,
+      "fold5_seed2": 10078.629280090332,
+      "fold5_seed3": 9396.983309268951,
+      "avg_gain": 9960.097862013181
+    },
+    {
+      "feature": "srad_errw",
+      "fold1_seed1": 7767.934376239777,
+      "fold1_seed2": 7149.942095518112,
+      "fold1_seed3": 7280.577731847763,
+      "fold2_seed1": 10511.201081037521,
+      "fold2_seed2": 10244.551499843597,
+      "fold2_seed3": 11682.569957137108,
+      "fold3_seed1": 9069.816507101059,
+      "fold3_seed2": 9328.83125281334,
+      "fold3_seed3": 8891.477979183197,
+      "fold4_seed1": 9758.371362686157,
+      "fold4_seed2": 10855.98230624199,
+      "fold4_seed3": 12137.619197249413,
+      "fold5_seed1": 9112.362664818764,
+      "fold5_seed2": 8431.095400810242,
+      "fold5_seed3": 8762.268610715866,
+      "avg_gain": 9398.97346821626
+    },
+    {
+      "feature": "period_errw",
+      "fold1_seed1": 9141.145802259445,
+      "fold1_seed2": 8710.240101099014,
+      "fold1_seed3": 8620.483591794968,
+      "fold2_seed1": 8346.211551189423,
+      "fold2_seed2": 8781.665681123734,
+      "fold2_seed3": 9258.255068659782,
+      "fold3_seed1": 8336.45207643509,
+      "fold3_seed2": 9382.40790104866,
+      "fold3_seed3": 7366.834327697754,
+      "fold4_seed1": 8436.009115695953,
+      "fold4_seed2": 9621.855679273605,
+      "fold4_seed3": 9973.074726104736,
+      "fold5_seed1": 9605.348551750183,
+      "fold5_seed2": 8946.273292183876,
+      "fold5_seed3": 8156.797478675842,
+      "avg_gain": 8845.536996332805
+    },
+    {
+      "feature": "depth_over_radii_model",
+      "fold1_seed1": 6873.232082366943,
+      "fold1_seed2": 7224.943647861481,
+      "fold1_seed3": 6295.9450969696045,
+      "fold2_seed1": 7388.600973844528,
+      "fold2_seed2": 8562.395184278488,
+      "fold2_seed3": 9071.917581319809,
+      "fold3_seed1": 9401.526129961014,
+      "fold3_seed2": 10511.048305511475,
+      "fold3_seed3": 8993.608008861542,
+      "fold4_seed1": 8442.856789827347,
+      "fold4_seed2": 7174.937357068062,
+      "fold4_seed3": 7993.922157049179,
+      "fold5_seed1": 9060.05608677864,
+      "fold5_seed2": 8587.898728847504,
+      "fold5_seed3": 7790.439591884613,
+      "avg_gain": 8224.888514828683
+    },
+    {
+      "feature": "period_days",
+      "fold1_seed1": 8507.108919143677,
+      "fold1_seed2": 8277.945467472076,
+      "fold1_seed3": 7598.891410589218,
+      "fold2_seed1": 7375.4464609622955,
+      "fold2_seed2": 8342.99822807312,
+      "fold2_seed3": 8821.040820002556,
+      "fold3_seed1": 6429.9615960121155,
+      "fold3_seed2": 7743.0193021297455,
+      "fold3_seed3": 7065.367276668549,
+      "fold4_seed1": 6906.797921657562,
+      "fold4_seed2": 8360.933824539185,
+      "fold4_seed3": 9690.417018651962,
+      "fold5_seed1": 8181.863266944885,
+      "fold5_seed2": 8283.392829179764,
+      "fold5_seed3": 7274.423382759094,
+      "avg_gain": 7923.973848319054
+    },
+    {
+      "feature": "logg_errw",
+      "fold1_seed1": 5700.599848747253,
+      "fold1_seed2": 5618.775412321091,
+      "fold1_seed3": 5706.674271345139,
+      "fold2_seed1": 6744.452925443649,
+      "fold2_seed2": 5868.952975511551,
+      "fold2_seed3": 6432.470741152763,
+      "fold3_seed1": 5770.721079587936,
+      "fold3_seed2": 7015.520958900452,
+      "fold3_seed3": 5862.274858951569,
+      "fold4_seed1": 7012.6945922374725,
+      "fold4_seed2": 7396.901891946793,
+      "fold4_seed3": 8221.366518974304,
+      "fold5_seed1": 7315.532078266144,
+      "fold5_seed2": 6966.577485918999,
+      "fold5_seed3": 6336.735542058945,
+      "avg_gain": 6531.350078757604
+    },
+    {
+      "feature": "planet_radius_re",
+      "fold1_seed1": 6093.464358329773,
+      "fold1_seed2": 6750.282870054245,
+      "fold1_seed3": 7089.416618347168,
+      "fold2_seed1": 6843.399278879166,
+      "fold2_seed2": 6496.68225312233,
+      "fold2_seed3": 7610.427195429802,
+      "fold3_seed1": 6274.425122499466,
+      "fold3_seed2": 5743.2095375061035,
+      "fold3_seed3": 4973.217951774597,
+      "fold4_seed1": 6033.3209590911865,
+      "fold4_seed2": 5785.962948560715,
+      "fold4_seed3": 6493.676083564758,
+      "fold5_seed1": 6753.186313033104,
+      "fold5_seed2": 6162.601235151291,
+      "fold5_seed3": 5683.008759021759,
+      "avg_gain": 6319.085432291031
+    },
+    {
+      "feature": "snr_proxy",
+      "fold1_seed1": 4805.275351524353,
+      "fold1_seed2": 5854.3104038238525,
+      "fold1_seed3": 5730.667327880859,
+      "fold2_seed1": 7807.304840326309,
+      "fold2_seed2": 6974.884074091911,
+      "fold2_seed3": 8317.448426246643,
+      "fold3_seed1": 5089.119267463684,
+      "fold3_seed2": 5469.7575833797455,
+      "fold3_seed3": 4717.327791690826,
+      "fold4_seed1": 5389.782943248749,
+      "fold4_seed2": 6651.128004312515,
+      "fold4_seed3": 5845.982736706734,
+      "fold5_seed1": 6349.116945743561,
+      "fold5_seed2": 5964.031536817551,
+      "fold5_seed3": 5764.801130533218,
+      "avg_gain": 6048.729224252701
+    },
+    {
+      "feature": "stellar_teff_k",
+      "fold1_seed1": 5519.333597660065,
+      "fold1_seed2": 6112.70650935173,
+      "fold1_seed3": 5608.865022659302,
+      "fold2_seed1": 5161.326891183853,
+      "fold2_seed2": 5232.269415378571,
+      "fold2_seed3": 5982.97384083271,
+      "fold3_seed1": 7516.603528499603,
+      "fold3_seed2": 8039.999223232269,
+      "fold3_seed3": 7506.884408950806,
+      "fold4_seed1": 5145.713942289352,
+      "fold4_seed2": 5860.528312563896,
+      "fold4_seed3": 6048.771125078201,
+      "fold5_seed1": 5611.112320423126,
+      "fold5_seed2": 5785.301217556,
+      "fold5_seed3": 5477.931033849716,
+      "avg_gain": 6040.68802596728
+    },
+    {
+      "feature": "stellar_logg_cgs",
+      "fold1_seed1": 4957.497890949249,
+      "fold1_seed2": 5645.299633264542,
+      "fold1_seed3": 5029.396404027939,
+      "fold2_seed1": 6555.575173854828,
+      "fold2_seed2": 6280.439700841904,
+      "fold2_seed3": 6685.942542552948,
+      "fold3_seed1": 6103.350666761398,
+      "fold3_seed2": 5536.097063302994,
+      "fold3_seed3": 4802.450935840607,
+      "fold4_seed1": 4993.926597833633,
+      "fold4_seed2": 6097.106836795807,
+      "fold4_seed3": 6117.312395691872,
+      "fold5_seed1": 5674.383157491684,
+      "fold5_seed2": 5629.129789590836,
+      "fold5_seed3": 5697.991430282593,
+      "avg_gain": 5720.393347938855
+    },
+    {
+      "feature": "depth_errw",
+      "fold1_seed1": 5360.2983593940735,
+      "fold1_seed2": 5208.767277956009,
+      "fold1_seed3": 5024.9061534404755,
+      "fold2_seed1": 5242.808087587357,
+      "fold2_seed2": 4925.478889942169,
+      "fold2_seed3": 5490.38541162014,
+      "fold3_seed1": 5237.293010473251,
+      "fold3_seed2": 5604.06946015358,
+      "fold3_seed3": 5460.282501935959,
+      "fold4_seed1": 5446.631318092346,
+      "fold4_seed2": 6333.297032117844,
+      "fold4_seed3": 6400.486058831215,
+      "fold5_seed1": 6108.737479567528,
+      "fold5_seed2": 4972.624794244766,
+      "fold5_seed3": 4644.1939380168915,
+      "avg_gain": 5430.683984891573
+    },
+    {
+      "feature": "log_duration_h",
+      "fold1_seed1": 4315.955753326416,
+      "fold1_seed2": 4384.823080301285,
+      "fold1_seed3": 4900.295622587204,
+      "fold2_seed1": 4964.072358369827,
+      "fold2_seed2": 5755.771064281464,
+      "fold2_seed3": 5673.575153231621,
+      "fold3_seed1": 5264.226718425751,
+      "fold3_seed2": 5965.231543660164,
+      "fold3_seed3": 4547.275763511658,
+      "fold4_seed1": 4544.012744426727,
+      "fold4_seed2": 5615.270698070526,
+      "fold4_seed3": 5508.353389263153,
+      "fold5_seed1": 6615.128938794136,
+      "fold5_seed2": 7359.649331331253,
+      "fold5_seed3": 5493.92058801651,
+      "avg_gain": 5393.837516506513
+    }
+  ],
+  "feature_importance_B_top20": [
+    {
+      "feature": "period_days",
+      "avg_gain": NaN
+    },
+    {
+      "feature": "duration_hours",
+      "avg_gain": NaN
+    },
+    {
+      "feature": "depth_ppm",
+      "avg_gain": NaN
+    },
+    {
+      "feature": "planet_radius_re",
+      "avg_gain": NaN
+    },
+    {
+      "feature": "stellar_teff_k",
+      "avg_gain": NaN
+    },
+    {
+      "feature": "stellar_logg_cgs",
+      "avg_gain": NaN
+    },
+    {
+      "feature": "stellar_radius_rsun",
+      "avg_gain": NaN
+    },
+    {
+      "feature": "mag_kepler",
+      "avg_gain": NaN
+    },
+    {
+      "feature": "mag_tess",
+      "avg_gain": NaN
+    },
+    {
+      "feature": "insolation_earth",
+      "avg_gain": NaN
+    },
+    {
+      "feature": "eqt_k",
+      "avg_gain": NaN
+    },
+    {
+      "feature": "snr_like",
+      "avg_gain": NaN
+    },
+    {
+      "feature": "period_errw",
+      "avg_gain": NaN
+    },
+    {
+      "feature": "duration_errw",
+      "avg_gain": NaN
+    },
+    {
+      "feature": "depth_errw",
+      "avg_gain": NaN
+    },
+    {
+      "feature": "prad_errw",
+      "avg_gain": NaN
+    },
+    {
+      "feature": "teff_errw",
+      "avg_gain": NaN
+    },
+    {
+      "feature": "logg_errw",
+      "avg_gain": NaN
+    },
+    {
+      "feature": "srad_errw",
+      "avg_gain": NaN
+    },
+    {
+      "feature": "insol_errw",
+      "avg_gain": NaN
+    }
+  ],
+  "families_saved": [
+    {
+      "fam": "lgb",
+      "stage": "A",
+      "seed": 1,
+      "fold": 1,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_A_seed1_fold1.txt",
+      "best_iteration": 150
+    },
+    {
+      "fam": "lgb",
+      "stage": "A",
+      "seed": 1,
+      "fold": 2,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_A_seed1_fold2.txt",
+      "best_iteration": 173
+    },
+    {
+      "fam": "lgb",
+      "stage": "A",
+      "seed": 1,
+      "fold": 3,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_A_seed1_fold3.txt",
+      "best_iteration": 132
+    },
+    {
+      "fam": "lgb",
+      "stage": "A",
+      "seed": 1,
+      "fold": 4,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_A_seed1_fold4.txt",
+      "best_iteration": 138
+    },
+    {
+      "fam": "lgb",
+      "stage": "A",
+      "seed": 1,
+      "fold": 5,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_A_seed1_fold5.txt",
+      "best_iteration": 212
+    },
+    {
+      "fam": "lgb",
+      "stage": "A",
+      "seed": 2,
+      "fold": 1,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_A_seed2_fold1.txt",
+      "best_iteration": 143
+    },
+    {
+      "fam": "lgb",
+      "stage": "A",
+      "seed": 2,
+      "fold": 2,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_A_seed2_fold2.txt",
+      "best_iteration": 170
+    },
+    {
+      "fam": "lgb",
+      "stage": "A",
+      "seed": 2,
+      "fold": 3,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_A_seed2_fold3.txt",
+      "best_iteration": 168
+    },
+    {
+      "fam": "lgb",
+      "stage": "A",
+      "seed": 2,
+      "fold": 4,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_A_seed2_fold4.txt",
+      "best_iteration": 186
+    },
+    {
+      "fam": "lgb",
+      "stage": "A",
+      "seed": 2,
+      "fold": 5,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_A_seed2_fold5.txt",
+      "best_iteration": 177
+    },
+    {
+      "fam": "lgb",
+      "stage": "A",
+      "seed": 3,
+      "fold": 1,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_A_seed3_fold1.txt",
+      "best_iteration": 138
+    },
+    {
+      "fam": "lgb",
+      "stage": "A",
+      "seed": 3,
+      "fold": 2,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_A_seed3_fold2.txt",
+      "best_iteration": 192
+    },
+    {
+      "fam": "lgb",
+      "stage": "A",
+      "seed": 3,
+      "fold": 3,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_A_seed3_fold3.txt",
+      "best_iteration": 118
+    },
+    {
+      "fam": "lgb",
+      "stage": "A",
+      "seed": 3,
+      "fold": 4,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_A_seed3_fold4.txt",
+      "best_iteration": 228
+    },
+    {
+      "fam": "lgb",
+      "stage": "A",
+      "seed": 3,
+      "fold": 5,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_A_seed3_fold5.txt",
+      "best_iteration": 156
+    },
+    {
+      "fam": "lgb",
+      "stage": "B",
+      "seed": 1,
+      "fold": 1,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_B_seed1_fold1.txt",
+      "best_iteration": 299
+    },
+    {
+      "fam": "lgb",
+      "stage": "B",
+      "seed": 1,
+      "fold": 2,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_B_seed1_fold2.txt",
+      "best_iteration": 373
+    },
+    {
+      "fam": "lgb",
+      "stage": "B",
+      "seed": 1,
+      "fold": 3,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_B_seed1_fold3.txt",
+      "best_iteration": 310
+    },
+    {
+      "fam": "lgb",
+      "stage": "B",
+      "seed": 1,
+      "fold": 4,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_B_seed1_fold4.txt",
+      "best_iteration": 346
+    },
+    {
+      "fam": "lgb",
+      "stage": "B",
+      "seed": 1,
+      "fold": 5,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_B_seed1_fold5.txt",
+      "best_iteration": 359
+    },
+    {
+      "fam": "lgb",
+      "stage": "B",
+      "seed": 2,
+      "fold": 1,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_B_seed2_fold1.txt",
+      "best_iteration": 325
+    },
+    {
+      "fam": "lgb",
+      "stage": "B",
+      "seed": 2,
+      "fold": 2,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_B_seed2_fold2.txt",
+      "best_iteration": 346
+    },
+    {
+      "fam": "lgb",
+      "stage": "B",
+      "seed": 2,
+      "fold": 3,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_B_seed2_fold3.txt",
+      "best_iteration": 286
+    },
+    {
+      "fam": "lgb",
+      "stage": "B",
+      "seed": 2,
+      "fold": 4,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_B_seed2_fold4.txt",
+      "best_iteration": 416
+    },
+    {
+      "fam": "lgb",
+      "stage": "B",
+      "seed": 2,
+      "fold": 5,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_B_seed2_fold5.txt",
+      "best_iteration": 360
+    },
+    {
+      "fam": "lgb",
+      "stage": "B",
+      "seed": 3,
+      "fold": 1,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_B_seed3_fold1.txt",
+      "best_iteration": 343
+    },
+    {
+      "fam": "lgb",
+      "stage": "B",
+      "seed": 3,
+      "fold": 2,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_B_seed3_fold2.txt",
+      "best_iteration": 230
+    },
+    {
+      "fam": "lgb",
+      "stage": "B",
+      "seed": 3,
+      "fold": 3,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_B_seed3_fold3.txt",
+      "best_iteration": 277
+    },
+    {
+      "fam": "lgb",
+      "stage": "B",
+      "seed": 3,
+      "fold": 4,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_B_seed3_fold4.txt",
+      "best_iteration": 453
+    },
+    {
+      "fam": "lgb",
+      "stage": "B",
+      "seed": 3,
+      "fold": 5,
+      "path": "/kaggle/working/exo_bundle_v4/model_lgb_B_seed3_fold5.txt",
+      "best_iteration": 346
+    },
+    {
+      "fam": "cat",
+      "stage": "A",
+      "seed": 1,
+      "fold": 1,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_A_seed1_fold1.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "A",
+      "seed": 1,
+      "fold": 2,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_A_seed1_fold2.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "A",
+      "seed": 1,
+      "fold": 3,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_A_seed1_fold3.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "A",
+      "seed": 1,
+      "fold": 4,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_A_seed1_fold4.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "A",
+      "seed": 1,
+      "fold": 5,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_A_seed1_fold5.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "A",
+      "seed": 2,
+      "fold": 1,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_A_seed2_fold1.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "A",
+      "seed": 2,
+      "fold": 2,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_A_seed2_fold2.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "A",
+      "seed": 2,
+      "fold": 3,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_A_seed2_fold3.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "A",
+      "seed": 2,
+      "fold": 4,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_A_seed2_fold4.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "A",
+      "seed": 2,
+      "fold": 5,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_A_seed2_fold5.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "A",
+      "seed": 3,
+      "fold": 1,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_A_seed3_fold1.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "A",
+      "seed": 3,
+      "fold": 2,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_A_seed3_fold2.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "A",
+      "seed": 3,
+      "fold": 3,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_A_seed3_fold3.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "A",
+      "seed": 3,
+      "fold": 4,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_A_seed3_fold4.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "A",
+      "seed": 3,
+      "fold": 5,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_A_seed3_fold5.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "B",
+      "seed": 1,
+      "fold": 1,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_B_seed1_fold1.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "B",
+      "seed": 1,
+      "fold": 2,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_B_seed1_fold2.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "B",
+      "seed": 1,
+      "fold": 3,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_B_seed1_fold3.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "B",
+      "seed": 1,
+      "fold": 4,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_B_seed1_fold4.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "B",
+      "seed": 1,
+      "fold": 5,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_B_seed1_fold5.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "B",
+      "seed": 2,
+      "fold": 1,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_B_seed2_fold1.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "B",
+      "seed": 2,
+      "fold": 2,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_B_seed2_fold2.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "B",
+      "seed": 2,
+      "fold": 3,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_B_seed2_fold3.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "B",
+      "seed": 2,
+      "fold": 4,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_B_seed2_fold4.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "B",
+      "seed": 2,
+      "fold": 5,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_B_seed2_fold5.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "B",
+      "seed": 3,
+      "fold": 1,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_B_seed3_fold1.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "B",
+      "seed": 3,
+      "fold": 2,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_B_seed3_fold2.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "B",
+      "seed": 3,
+      "fold": 3,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_B_seed3_fold3.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "B",
+      "seed": 3,
+      "fold": 4,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_B_seed3_fold4.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "cat",
+      "stage": "B",
+      "seed": 3,
+      "fold": 5,
+      "path": "/kaggle/working/exo_bundle_v4/model_cat_B_seed3_fold5.cbm",
+      "best_iteration": null
+    },
+    {
+      "fam": "xgb",
+      "stage": "A",
+      "seed": 1,
+      "fold": 1,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_A_seed1_fold1.json",
+      "best_iteration": 298
+    },
+    {
+      "fam": "xgb",
+      "stage": "A",
+      "seed": 1,
+      "fold": 2,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_A_seed1_fold2.json",
+      "best_iteration": 300
+    },
+    {
+      "fam": "xgb",
+      "stage": "A",
+      "seed": 1,
+      "fold": 3,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_A_seed1_fold3.json",
+      "best_iteration": 259
+    },
+    {
+      "fam": "xgb",
+      "stage": "A",
+      "seed": 1,
+      "fold": 4,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_A_seed1_fold4.json",
+      "best_iteration": 309
+    },
+    {
+      "fam": "xgb",
+      "stage": "A",
+      "seed": 1,
+      "fold": 5,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_A_seed1_fold5.json",
+      "best_iteration": 304
+    },
+    {
+      "fam": "xgb",
+      "stage": "A",
+      "seed": 2,
+      "fold": 1,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_A_seed2_fold1.json",
+      "best_iteration": 298
+    },
+    {
+      "fam": "xgb",
+      "stage": "A",
+      "seed": 2,
+      "fold": 2,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_A_seed2_fold2.json",
+      "best_iteration": 300
+    },
+    {
+      "fam": "xgb",
+      "stage": "A",
+      "seed": 2,
+      "fold": 3,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_A_seed2_fold3.json",
+      "best_iteration": 259
+    },
+    {
+      "fam": "xgb",
+      "stage": "A",
+      "seed": 2,
+      "fold": 4,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_A_seed2_fold4.json",
+      "best_iteration": 309
+    },
+    {
+      "fam": "xgb",
+      "stage": "A",
+      "seed": 2,
+      "fold": 5,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_A_seed2_fold5.json",
+      "best_iteration": 304
+    },
+    {
+      "fam": "xgb",
+      "stage": "A",
+      "seed": 3,
+      "fold": 1,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_A_seed3_fold1.json",
+      "best_iteration": 298
+    },
+    {
+      "fam": "xgb",
+      "stage": "A",
+      "seed": 3,
+      "fold": 2,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_A_seed3_fold2.json",
+      "best_iteration": 300
+    },
+    {
+      "fam": "xgb",
+      "stage": "A",
+      "seed": 3,
+      "fold": 3,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_A_seed3_fold3.json",
+      "best_iteration": 259
+    },
+    {
+      "fam": "xgb",
+      "stage": "A",
+      "seed": 3,
+      "fold": 4,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_A_seed3_fold4.json",
+      "best_iteration": 309
+    },
+    {
+      "fam": "xgb",
+      "stage": "A",
+      "seed": 3,
+      "fold": 5,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_A_seed3_fold5.json",
+      "best_iteration": 304
+    },
+    {
+      "fam": "xgb",
+      "stage": "B",
+      "seed": 1,
+      "fold": 1,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_B_seed1_fold1.json",
+      "best_iteration": 364
+    },
+    {
+      "fam": "xgb",
+      "stage": "B",
+      "seed": 1,
+      "fold": 2,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_B_seed1_fold2.json",
+      "best_iteration": 342
+    },
+    {
+      "fam": "xgb",
+      "stage": "B",
+      "seed": 1,
+      "fold": 3,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_B_seed1_fold3.json",
+      "best_iteration": 348
+    },
+    {
+      "fam": "xgb",
+      "stage": "B",
+      "seed": 1,
+      "fold": 4,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_B_seed1_fold4.json",
+      "best_iteration": 397
+    },
+    {
+      "fam": "xgb",
+      "stage": "B",
+      "seed": 1,
+      "fold": 5,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_B_seed1_fold5.json",
+      "best_iteration": 414
+    },
+    {
+      "fam": "xgb",
+      "stage": "B",
+      "seed": 2,
+      "fold": 1,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_B_seed2_fold1.json",
+      "best_iteration": 364
+    },
+    {
+      "fam": "xgb",
+      "stage": "B",
+      "seed": 2,
+      "fold": 2,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_B_seed2_fold2.json",
+      "best_iteration": 342
+    },
+    {
+      "fam": "xgb",
+      "stage": "B",
+      "seed": 2,
+      "fold": 3,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_B_seed2_fold3.json",
+      "best_iteration": 348
+    },
+    {
+      "fam": "xgb",
+      "stage": "B",
+      "seed": 2,
+      "fold": 4,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_B_seed2_fold4.json",
+      "best_iteration": 397
+    },
+    {
+      "fam": "xgb",
+      "stage": "B",
+      "seed": 2,
+      "fold": 5,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_B_seed2_fold5.json",
+      "best_iteration": 414
+    },
+    {
+      "fam": "xgb",
+      "stage": "B",
+      "seed": 3,
+      "fold": 1,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_B_seed3_fold1.json",
+      "best_iteration": 364
+    },
+    {
+      "fam": "xgb",
+      "stage": "B",
+      "seed": 3,
+      "fold": 2,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_B_seed3_fold2.json",
+      "best_iteration": 342
+    },
+    {
+      "fam": "xgb",
+      "stage": "B",
+      "seed": 3,
+      "fold": 3,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_B_seed3_fold3.json",
+      "best_iteration": 348
+    },
+    {
+      "fam": "xgb",
+      "stage": "B",
+      "seed": 3,
+      "fold": 4,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_B_seed3_fold4.json",
+      "best_iteration": 397
+    },
+    {
+      "fam": "xgb",
+      "stage": "B",
+      "seed": 3,
+      "fold": 5,
+      "path": "/kaggle/working/exo_bundle_v4/model_xgb_B_seed3_fold5.json",
+      "best_iteration": 414
+    }
+  ]
+}
