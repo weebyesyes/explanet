@@ -1,0 +1,22 @@
+.container {
+  flex: 1;
+  justify-items: center;
+  align-items: center;
+  padding-top: 70px;
+}
+
+.title {
+  margin-top: 120px;
+  font-size: 25px;
+  font-weight: 900;
+  background-color: #272a4f;
+  padding: 8px;
+  padding-left: 25px;
+  padding-right: 25px;
+  border-radius: 25px;
+  box-shadow: 0px 0px 20px;
+}
+
+.description {
+  margin-top: 20px;
+}
