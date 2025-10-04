@@ -1,0 +1,92 @@
+.container {
+  background-color: black;
+  display: flex;
+  height: 100%;
+  width: 100%;
+  flex-direction: row;
+}
+
+.darkOverlay {
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  transition: background-color 0.3s ease;
+}
+
+.darkOverlayOpened {
+  background-color: rgba(0, 0, 0, 0.8);
+  transition: background-color 0.3s ease;
+}
+
+.sidebar {
+  background-color: black;
+  position: absolute;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-image: linear-gradient(0deg, #272a4f, #df6ac9) 1;
+}
+
+.sidebarOpened {
+  width: 200px;
+  border-right: 3px solid;
+  transition: width 0.3s ease, border-right 0.3s ease;
+}
+
+.sidebarClosed {
+  width: 0;
+  border-right: 0 solid;
+  transition: width 0.3s ease, border-right 0.3s ease;
+  overflow: hidden;
+}
+
+.sidebarOpened * {
+  transition: opacity 0.3s ease 0.1s;
+  opacity: 1;
+}
+
+.sidebarClosed * {
+  opacity: 0;
+}
+
+.title {
+  font-family: "Tomorrow";
+  font-weight: 900;
+  font-size: 25px;
+}
+
+.sidebarOpenButton {
+  display: flex;
+  top: 90px;
+  left: 203px;
+  position: absolute;
+  transition: left 0.3s ease;
+}
+
+.sidebarOpenButton:hover {
+  cursor: pointer;
+}
+
+.sidebarOpenButtonClosed {
+  transition: left 0.3s ease;
+  left: 0
+}
+
+.sidebarOpenButtonSquare {
+  width: 20px;
+  height: 34px;
+  background-color: #df6ac9
+}
+
+.sidebarOpenButtonTriangle {
+  width: 0px;
+  height: 0px;
+  border-left: solid 8px #df6ac9;
+  border-top: solid 17px transparent;
+  border-bottom: solid 17px transparent;
+}
+
+.sidebarButton:hover {
+  cursor: pointer;
+}
