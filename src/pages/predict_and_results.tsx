@@ -233,7 +233,15 @@ export default function PredictPage() {
           {(result.metrics || result.curves) && (
             <details style={{ marginTop: "1.5rem" }}>
               <summary>Diagnostics</summary>
-              <pre style={{ background: "#111", color: "#0f0", padding: "1rem", overflowX: "auto" }}>
+              <pre
+                style={{
+                  background: "#111",
+                  color: "#0f0",
+                  padding: "1rem",
+                  overflowX: "auto",
+                  textAlign: "left",
+                }}
+              >
                 {JSON.stringify(
                   {
                     metrics: result.metrics,

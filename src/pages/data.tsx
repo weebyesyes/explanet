@@ -61,6 +61,13 @@ export default function DataValidatePage() {
     <div className={styles.container}>
       <p className={styles.title}>Validate Observation Data</p>
       <p style={{ marginBottom: "1rem", textAlign: 'center' }}>Upload your candidate CSV to run the schema and sanity validator before prediction.</p>
+      <a
+        className={styles.downloadButton}
+        href="/Demo/demo_strict_fixed.csv"
+        download
+      >
+        Download Demo CSV
+      </a>
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: 'center' }}>
         <input
           type="file"
