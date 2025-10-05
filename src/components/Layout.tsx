@@ -12,7 +12,6 @@ const planetImages = [
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [sidebarOpened, setSidebarOpened] = useState(false);
-  const [mouse, setMouse] = useState({x: 0, y: 0});
   const router = useRouter();
 
   function SidebarButton(props: { label: string, destination: string }) {
@@ -55,14 +54,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
 
     setPlanets(planets);
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const x = e.clientX * 17 / width;
-      const y = e.clientY * 17 / height;
-      setMouse({ x, y });
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
   }, [])
 
   return (
@@ -76,8 +67,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             width={320}
             style={{
               position: 'absolute',
-              left: planet.left + mouse.x,
-              top: planet.top + mouse.y,
+              left: planet.left,
+              top: planet.top,
               filter: 'brightness(50%)',
               zIndex: -1
             }}
