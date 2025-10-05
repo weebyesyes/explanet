@@ -22,7 +22,7 @@ p, h1, h2, h3, h4, span, li {
 button {
   all: unset;
   font-family: 'Cantarell';
-  background: linear-gradient(90deg, #df6ac9, #bc50d7, #6840c4, #272a4f);
+  background: linear-gradient(135deg, rgb(39, 42, 79), rgb(64, 77, 140));
   color: white;
   padding: 10px;
   padding-left: 15px;
@@ -39,7 +39,7 @@ button {
 
 button:hover:enabled {
   cursor: pointer;
-  background: linear-gradient(270deg, #df6ac9, #bc50d7, #6840c4, #272a4f);
+  background: linear-gradient(135deg, rgb(64, 77, 140), rgb(39, 42, 79));
   transition: background 0.3s ease;
 }
 
@@ -60,7 +60,7 @@ input {
 input::file-selector-button {
   all: unset;
   font-family: 'Cantarell';
-  background: linear-gradient(90deg, #df6ac9, #bc50d7, #6840c4, #272a4f);
+  background: linear-gradient(135deg, rgb(39, 42, 79), rgb(64, 77, 140));
   color: white;
   padding: 10px;
   padding-left: 15px;
@@ -76,7 +76,7 @@ input::file-selector-button {
 
 input::file-selector-button:hover {
   cursor: pointer;
-  background: linear-gradient(270deg, #df6ac9, #bc50d7, #6840c4, #272a4f);
+  background: linear-gradient(135deg, rgb(64, 77, 140), rgb(39, 42, 79));
   transition: background 0.3s ease;
 }
 
