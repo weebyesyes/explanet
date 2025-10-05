@@ -67,6 +67,13 @@ pip install pandas numpy scikit-learn lightgbm joblib
 pip install catboost xgboost
 ```
 
+If youd like to try the version we have used (should not be necessary in python 3.10), use these:
+```
+pip install "numpy==1.23.5" "scipy==1.9.3" "pandas==1.5.3"
+pip install "scikit-learn==1.2.2"
+pip install "lightgbm==3.3.5" "xgboost==1.7.6" "catboost==1.2"
+```
+
 If a `requirements.txt` file is added later, prefer installing from that file:
 
 ```bash
