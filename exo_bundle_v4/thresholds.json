@@ -1,6 +1,10 @@
 {
   "planet_recommended": 0.3901079172181977,
-  "per_mission": {},
+  "per_mission": {
+    "Kepler": 0.39,
+    "TESS":   0.061,
+    "K2":     0.014
+  },
   "mode": "max_f1",
   "target_recall": 0.9,
   "blend_weights": {

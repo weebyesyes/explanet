@@ -95,7 +95,14 @@ export default function PredictPage() {
   }
 
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "2rem" }}>
+    <div
+      style={{
+        maxWidth: 1200,
+        margin: "0 auto",
+        padding: "2rem",
+        color: "#ffffff",
+      }}
+    >
       <h1>Run Predictions</h1>
       <p style={{ marginBottom: "1rem" }}>
         Upload a validated CSV to trigger the inference pipeline. The Python bundle will load the
@@ -158,16 +165,33 @@ export default function PredictPage() {
 
           {columns.length > 0 && result.preds && (
             <div style={{ overflowX: "auto", marginTop: "1.5rem" }}>
-              <table style={{ borderCollapse: "collapse", width: "100%" }}>
-                <thead>
-                  <tr>
-                    {columns.map((col) => (
-                      <th
-                        key={col}
+              <div
+                style={{
+                  borderRadius: 8,
+                  border: "1px solid rgba(122, 160, 255, 0.5)",
+                  overflow: "hidden",
+                  minWidth: "max-content",
+                }}
+              >
+                <table
+                  style={{
+                    borderCollapse: "collapse",
+                    width: "100%",
+                    background: "rgba(255, 255, 255, 0.92)",
+                    color: "#111111",
+                  }}
+                >
+                  <thead>
+                    <tr>
+                      {columns.map((col) => (
+                        <th
+                          key={col}
                         style={{
                           textAlign: "left",
-                          padding: "0.5rem",
-                          borderBottom: "1px solid rgba(255,255,255,0.1)",
+                          padding: "0.75rem",
+                          background: "rgba(122, 160, 255, 0.2)",
+                          border: "1px solid rgba(122, 160, 255, 0.5)",
+                          fontWeight: 600,
                         }}
                       >
                         {col}
@@ -179,7 +203,14 @@ export default function PredictPage() {
                   {result.preds.map((row, idx) => (
                     <tr key={idx}>
                       {columns.map((col) => (
-                        <td key={col} style={{ padding: "0.5rem", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                        <td
+                          key={col}
+                          style={{
+                            padding: "0.75rem",
+                            border: "1px solid rgba(122, 160, 255, 0.35)",
+                            background: "rgba(255, 255, 255, 0.96)",
+                          }}
+                        >
                           {(() => {
                             const value = row[col];
                             if (typeof value === "number") return value.toString();
@@ -191,7 +222,8 @@ export default function PredictPage() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+                </table>
+              </div>
             </div>
           )}
 

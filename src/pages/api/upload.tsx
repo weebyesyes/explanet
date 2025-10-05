@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import formidable from "formidable";
+import formidable, { type Fields, type Files } from "formidable";
 import { NextApiRequest, NextApiResponse } from "next";
 
 export const config = {
@@ -27,7 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
 
   // Parse the incoming form
-  form.parse(req, (err: any, fields: any, files: any) => {
+  form.parse(req, (err: Error | null, _fields: Fields, files: Files) => {
     if (err) {
       console.error("Formidable error:", err);
       res.status(500).json({ error: "Error parsing form data" });

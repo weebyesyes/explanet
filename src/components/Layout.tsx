@@ -1,7 +1,6 @@
 import { useState } from "react";
 import styles from "../styles/components/Layout.module.css";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [sidebarOpened, setSidebarOpened] = useState(false);
