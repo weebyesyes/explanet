@@ -33,14 +33,13 @@ button {
   text-align: center;
   display: inline-flex;
   margin-right: 10px;
-  transition: background 0.3s ease;
   font-weight: 900;
+  z-index: 99999;
 }
 
 button:hover:enabled {
   cursor: pointer;
   background: linear-gradient(135deg, rgb(64, 77, 140), rgb(39, 42, 79));
-  transition: background 0.3s ease;
 }
 
 button:disabled {
@@ -70,14 +69,13 @@ input::file-selector-button {
   text-align: center;
   display: inline-flex;
   margin-right: 10px;
-  transition: background 0.3s ease;
   font-weight: 900;
+  z-index: 99999;
 }
 
 input::file-selector-button:hover {
   cursor: pointer;
   background: linear-gradient(135deg, rgb(64, 77, 140), rgb(39, 42, 79));
-  transition: background 0.3s ease;
 }
 
 
