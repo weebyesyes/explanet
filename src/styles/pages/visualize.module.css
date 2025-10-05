@@ -2,20 +2,22 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
-  width: 80%;
-  max-width: 600px;
+  width: 100%;
+  max-width: none;
+  padding: 32px 24px 64px;
+  box-sizing: border-box;
+  color: #fff;
 }
 
 .title {
   font-size: 25px;
   font-weight: 900;
+  color: #fff;
 }
 
 .pageContent {
-  width: 100%;
-  max-width: 1440px;
+  width: min(100%, 1440px);
   display: flex;
   flex-direction: column;
   gap: 48px;
@@ -86,6 +88,7 @@
   flex-direction: column;
   gap: 12px;
   min-height: 200px;
+  color: #fff;
 }
 
 .cardHeader {
@@ -141,6 +144,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+  color: #fff;
 }
 
 .table th,
@@ -300,4 +304,13 @@
   .sectionHeader h2 {
     font-size: 24px;
   }
+}
+
+.justified{
+  color:#fff;
+  max-width:70ch;          /* forces wrapping so justification is visible */
+  margin-inline:auto;      /* center the block */
+  text-align:center;      
+  text-align-last:center; /* justify the last line too */
+  hyphens:auto;            /* nicer spacing when justified */
 }

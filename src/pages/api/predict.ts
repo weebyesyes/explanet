@@ -96,7 +96,9 @@ function toCsv(preds: Array<Record<string, unknown>>): string {
       .map((key) => {
         const value = row[key];
         if (value === null || value === undefined) return "";
-        const text = String(value);
+        const normalized =
+          typeof value === "boolean" ? (value ? "True" : "False") : value;
+        const text = String(normalized);
         return text.includes(",") || text.includes("\n") ? `"${text.replace(/"/g, '""')}"` : text;
       })
       .join(",")

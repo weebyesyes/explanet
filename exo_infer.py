@@ -653,7 +653,7 @@ class InferenceEngine:
     ) -> Dict[str, Any]:
         """
         Returns dict with:
-          - preds: DataFrame [id, mission, P(planet), PredictedClass, Confidence, Planet>=Thr]
+          - preds: DataFrame [id, mission, P(planet), PredictedClass, Confidence, is_planet]
           - threshold_used, per_mission_thresholds
           - metrics (if labels exist), curves (if labels exist)
         STRICT: raises ValueError if 'mission' is missing/invalid.
@@ -742,12 +742,12 @@ class InferenceEngine:
         })
 
         if per_mission_thr:
-            preds["Planet>=Thr"] = [
-                int(p >= per_mission_thr.get(m, thr_used))
+            preds["is_planet"] = [
+                p >= per_mission_thr.get(m, thr_used)
                 for m, p in zip(preds[INTERNAL["mission"]].values, preds["P(planet)"].values)
             ]
         else:
-            preds["Planet>=Thr"] = (preds["P(planet)"].values >= thr_used).astype(int)
+            preds["is_planet"] = preds["P(planet)"].values >= thr_used
 
         # Metrics/curves if label column exists and is recognized
         metrics, curves = None, None

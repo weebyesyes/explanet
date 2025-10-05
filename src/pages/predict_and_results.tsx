@@ -146,16 +146,16 @@ export default function PredictPage() {
           {result.per_mission_thresholds && Object.keys(result.per_mission_thresholds).length > 0 && (
             <div>
               <h3>Per-mission thresholds</h3>
-              <ul>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                 {Object.entries(result.per_mission_thresholds).map(([mission, thr]) => {
                   const value = typeof thr === "number" ? thr : Number(thr);
                   return (
-                    <li key={mission}>
+                    <p key={mission} style={{ margin: 0, textAlign: "left" }}>
                       {mission}: {Number.isFinite(value) ? value.toFixed(4) : String(thr)}
-                    </li>
+                    </p>
                   );
                 })}
-              </ul>
+              </div>
             </div>
           )}
 
@@ -209,6 +209,7 @@ export default function PredictPage() {
                         >
                           {(() => {
                             const value = row[col];
+                            if (typeof value === "boolean") return value ? "True" : "False";
                             if (typeof value === "number") return value.toString();
                             if (value === null || value === undefined) return "";
                             return String(value);

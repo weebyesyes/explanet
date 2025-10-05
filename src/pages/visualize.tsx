@@ -1195,7 +1195,7 @@ export default function VisualizePage() {
           </>
         ) : (
           <section className={styles.section}>
-            <p style={{ color: "#fff" }}>
+            <p className={styles.justified}>
               No charts yet. Upload a candidate CSV that passes validation to explore its quality, compare to the bundled training
               corpora, and inspect prediction metrics.
             </p>
