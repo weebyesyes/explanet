@@ -221,11 +221,54 @@ export default function Home() {
       </section>
 
       <section className={styles.challengeSection}>
-        <h2 className={styles.sectionHeading}>About the challenge</h2>
+        <h2 className={styles.sectionHeading}>Advanced — How we trained the predictor</h2>
         <p>
-          This project was built for the 2025 NASA Space Apps Challenge (Advanced). The goal: use open NASA
-          datasets (Kepler, K2, TESS) and AI/ML to classify exoplanet signals, plus a web UI so people can
-          upload new data, see predictions, and understand why.
+          Full training details &amp; code (reproducible). Kaggle notebook:{' '}
+          <a href="https://www.kaggle.com/code/weebyes/exoplanet" target="_blank" rel="noopener noreferrer">
+            https://www.kaggle.com/code/weebyes/exoplanet
+          </a>
+          .
+        </p>
+        <p>
+          We pre-trained the exoplanet classifier on open NASA catalogs (Kepler KOI, K2, and TESS TOI) and then
+          exported a portable inference bundle that the web app loads.
+        </p>
+        <p>
+          What the model predicts: three classes (Planet, Candidate, False Positive). Binary view: Planet vs Not
+          via P(planet) ∈ [0, 1], and the app marks a row Planet if P(planet) ≥ threshold (we default to the
+          CV-recommended threshold below).
+        </p>
+        <p>
+          Data harmonization &amp; features (short version). Unified schema across missions with unit fixes such as
+          K2 transit depth % versus ppm, per-mission median imputation with explicit missing flags, engineered
+          signals with per-mission winsorize plus z-scores to stabilize cross-mission stats, star-context features
+          covering multiplicity, within-star ranks, and simple per-star stats, physics ratios like depth versus
+          radii models, SNR proxies, T<sub>eq</sub> versus T<sub>eff</sub> with logarithms, and light train-time
+          augmentation by jittering raw physical features using published error widths.
+        </p>
+        <p>
+          Models (ensemble). Base learners: LightGBM and CatBoost with optional XGBoost. Two-stage head: Planet
+          versus Not, followed by Candidate versus False Positive to form final tri-class probabilities. We use
+          five-fold GroupKFold by star to avoid leaks, seed bagging across random initializations, stacking with
+          multinomial logistic regression on out-of-fold base probabilities, optional Platt scaling on P(planet)
+          when stacking is off, and inverse-frequency class weights.
+        </p>
+        <p>
+          What the web app does at inference: harmonizes your CSV into the same feature space, runs all saved
+          models across seeds, folds, and families, stacks and blends the outputs, and returns P(planet), the most
+          likely class, and a simple High, Medium, or Low confidence tag.
+        </p>
+        <p>
+          Cross-validated training results (OOF, across missions). PR-AUC for P(planet) is approximately 0.908,
+          the Brier score is about 0.045, tri-class accuracy (Planet, Candidate, False Positive) is roughly 0.818,
+          binary accuracy (Planet versus Not) is around 0.938, and the recommended default threshold for Planet
+          versus Not is near 0.39 (max-F1), yielding F1 ≈ 0.820 and Recall ≈ 0.842 with per-mission thresholds
+          computed when data volume allows.
+        </p>
+        <p>
+          What we export: preprocessing pipeline, feature list, per-fold and per-seed model files for each
+          family and stage, optional meta-blender, optional calibrator, thresholds, metrics snapshot, version
+          manifest, and a small demo CSV.
         </p>
       </section>
     </div>

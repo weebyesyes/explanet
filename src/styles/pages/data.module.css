@@ -12,3 +12,23 @@
   width: 80%;
   max-width: 600px;
 }
+
+.downloadButton {
+  font-family: 'Cantarell';
+  background: linear-gradient(90deg, #df6ac9, #bc50d7, #6840c4, #272a4f);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 35px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  text-decoration: none;
+  margin-bottom: 12px;
+  transition: background 0.3s ease;
+}
+
+.downloadButton:hover {
+  background: linear-gradient(270deg, #df6ac9, #bc50d7, #6840c4, #272a4f);
+  cursor: pointer;
+}
