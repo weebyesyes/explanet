@@ -1,0 +1,31 @@
+.container {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.inputFile {
+  all: unset;
+  color: white;
+  display: flex;
+  
+}
+
+.inputFile::file-selector-button {
+  all: unset;
+  font-family: 'Cantarell';
+  background-color: #6840c4;
+  color: white;
+  height: 40px;
+  width: 100px;
+  border-radius: 10px;
+  justify-content: center;
+  text-align: center;
+  display: flex;
+}
+
+.inputFile::file-selector-button:hover {
+  cursor: pointer;
+}

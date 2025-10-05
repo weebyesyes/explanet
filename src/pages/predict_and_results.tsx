@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import styles from "../styles/pages/predict_and_results.module.css";
 
 type PredictionRow = Record<string, unknown>;
 
@@ -115,7 +116,9 @@ export default function PredictPage() {
           accept=".csv,.zip"
           onChange={(event) => setFile(event.target.files?.[0] ?? null)}
           disabled={loading}
+          className={styles.inputFile}
         />
+        
         <button type="submit" disabled={!file || loading}>
           {loading ? "Running inference..." : "Predict"}
         </button>
