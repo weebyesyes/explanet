@@ -832,6 +832,812 @@ def _calibration_curve(y_true, y_prob, n_bins=10):
 
 
 # =====================
+# Visualization helpers
+# =====================
+
+MISSIONS = ["Kepler", "TESS", "K2"]
+
+
+def _err_width(df: pd.DataFrame, pos: str, neg: str) -> pd.Series:
+    if pos not in df.columns and neg not in df.columns:
+        return pd.Series(np.nan, index=df.index)
+    pos_vals = pd.to_numeric(df[pos], errors="coerce") if pos in df.columns else pd.Series(np.nan, index=df.index)
+    neg_vals = pd.to_numeric(df[neg], errors="coerce") if neg in df.columns else pd.Series(np.nan, index=df.index)
+    return (pos_vals.abs() + neg_vals.abs()) / 2.0
+
+
+def _prepare_training_kepler(df: pd.DataFrame) -> pd.DataFrame:
+    out = pd.DataFrame(index=df.index)
+    out[INTERNAL["mission"]] = "Kepler"
+    out[INTERNAL["id"]] = df.get("kepoi_name", df.index).astype(str)
+    out[INTERNAL["star_id"]] = df.get("kepid", out[INTERNAL["id"]]).astype(str)
+
+    disp = df.get("koi_disposition", pd.Series("", index=df.index)).astype(str).str.upper().str.strip()
+    pdisp = df.get("koi_pdisposition", pd.Series("", index=df.index)).astype(str).str.upper().str.strip()
+    label = disp
+    label = label.mask(~label.isin(KEPLER_MAP.keys()) & pdisp.isin(KEPLER_MAP.keys()), pdisp)
+    out[INTERNAL["label"]] = label.map(KEPLER_MAP)
+
+    def col(name: str):
+        return pd.to_numeric(df.get(name), errors="coerce")
+
+    out[INTERNAL["period_days"]] = col("koi_period")
+    out[INTERNAL["duration_hours"]] = col("koi_duration")
+    out[INTERNAL["depth_ppm"]] = col("koi_depth")
+    out[INTERNAL["planet_radius_re"]] = col("koi_prad")
+    out[INTERNAL["stellar_teff_k"]] = col("koi_steff")
+    out[INTERNAL["stellar_logg_cgs"]] = col("koi_slogg")
+    out[INTERNAL["stellar_radius_rsun"]] = col("koi_srad")
+    out[INTERNAL["mag_kepler"]] = col("koi_kepmag")
+    out[INTERNAL["mag_tess"]] = np.nan
+    out[INTERNAL["insolation_earth"]] = col("koi_insol")
+    out[INTERNAL["eqt_k"]] = col("koi_teq")
+    out[INTERNAL["snr_like"]] = col("koi_model_snr")
+
+    out["period_errw"] = _err_width(df, "koi_period_err1", "koi_period_err2")
+    out["duration_errw"] = _err_width(df, "koi_duration_err1", "koi_duration_err2")
+    out["depth_errw"] = _err_width(df, "koi_depth_err1", "koi_depth_err2")
+    out["prad_errw"] = _err_width(df, "koi_prad_err1", "koi_prad_err2")
+    out["teff_errw"] = _err_width(df, "koi_steff_err1", "koi_steff_err2")
+    out["logg_errw"] = _err_width(df, "koi_slogg_err1", "koi_slogg_err2")
+    out["srad_errw"] = _err_width(df, "koi_srad_err1", "koi_srad_err2")
+    out["insol_errw"] = _err_width(df, "koi_insol_err1", "koi_insol_err2")
+    out["eqt_errw"] = _err_width(df, "koi_teq_err1", "koi_teq_err2")
+
+    return out
+
+
+def _prepare_training_tess(df: pd.DataFrame) -> pd.DataFrame:
+    out = pd.DataFrame(index=df.index)
+    out[INTERNAL["mission"]] = "TESS"
+    out[INTERNAL["id"]] = df.get("toi", df.index).astype(str)
+    out[INTERNAL["star_id"]] = df.get("tid", out[INTERNAL["id"]]).astype(str)
+
+    disp = df.get("tfopwg_disp", pd.Series("", index=df.index)).astype(str).str.upper().str.strip()
+    out[INTERNAL["label"]] = disp.map(TOI_MAP)
+
+    def col(name: str):
+        return pd.to_numeric(df.get(name), errors="coerce")
+
+    out[INTERNAL["period_days"]] = col("pl_orbper")
+    out[INTERNAL["duration_hours"]] = col("pl_trandurh")
+    out[INTERNAL["depth_ppm"]] = col("pl_trandep")
+    out[INTERNAL["planet_radius_re"]] = col("pl_rade")
+    out[INTERNAL["stellar_teff_k"]] = col("st_teff")
+    out[INTERNAL["stellar_logg_cgs"]] = col("st_logg")
+    out[INTERNAL["stellar_radius_rsun"]] = col("st_rad")
+    out[INTERNAL["mag_kepler"]] = np.nan
+    out[INTERNAL["mag_tess"]] = col("st_tmag")
+    out[INTERNAL["insolation_earth"]] = col("pl_insol")
+    out[INTERNAL["eqt_k"]] = col("pl_eqt")
+    out[INTERNAL["snr_like"]] = np.nan
+
+    out["period_errw"] = _err_width(df, "pl_orbpererr1", "pl_orbpererr2")
+    out["duration_errw"] = _err_width(df, "pl_trandurherr1", "pl_trandurherr2")
+    out["depth_errw"] = _err_width(df, "pl_trandeperr1", "pl_trandeperr2")
+    out["prad_errw"] = _err_width(df, "pl_radeerr1", "pl_radeerr2")
+    out["teff_errw"] = _err_width(df, "st_tefferr1", "st_tefferr2")
+    out["logg_errw"] = _err_width(df, "st_loggerr1", "st_loggerr2")
+    out["srad_errw"] = _err_width(df, "st_raderr1", "st_raderr2")
+    out["insol_errw"] = _err_width(df, "pl_insolerr1", "pl_insolerr2")
+    out["eqt_errw"] = _err_width(df, "pl_eqterr1", "pl_eqterr2")
+
+    return out
+
+
+def _prepare_training_k2(df: pd.DataFrame) -> pd.DataFrame:
+    out = pd.DataFrame(index=df.index)
+    out[INTERNAL["mission"]] = "K2"
+    out[INTERNAL["id"]] = df.get("pl_name", df.index).astype(str)
+    out[INTERNAL["star_id"]] = df.get("hostname", out[INTERNAL["id"]]).astype(str)
+
+    disp = df.get("disposition", pd.Series("", index=df.index)).astype(str).str.upper().str.strip()
+    out[INTERNAL["label"]] = disp.map(K2_MAP)
+
+    def col(name: str):
+        return pd.to_numeric(df.get(name), errors="coerce")
+
+    out[INTERNAL["period_days"]] = col("pl_orbper")
+    out[INTERNAL["duration_hours"]] = np.nan  # not available
+    out[INTERNAL["depth_ppm"]] = np.nan
+    out[INTERNAL["planet_radius_re"]] = col("pl_rade")
+    out[INTERNAL["stellar_teff_k"]] = col("st_teff")
+    out[INTERNAL["stellar_logg_cgs"]] = col("st_logg")
+    out[INTERNAL["stellar_radius_rsun"]] = col("st_rad")
+    out[INTERNAL["mag_kepler"]] = col("sy_vmag")
+    out[INTERNAL["mag_tess"]] = np.nan
+    out[INTERNAL["insolation_earth"]] = col("pl_insol")
+    out[INTERNAL["eqt_k"]] = col("pl_eqt")
+    out[INTERNAL["snr_like"]] = np.nan
+
+    out["period_errw"] = _err_width(df, "pl_orbpererr1", "pl_orbpererr2")
+    out["duration_errw"] = np.nan
+    out["depth_errw"] = np.nan
+    out["prad_errw"] = _err_width(df, "pl_radeerr1", "pl_radeerr2")
+    out["teff_errw"] = _err_width(df, "st_tefferr1", "st_tefferr2")
+    out["logg_errw"] = _err_width(df, "st_loggerr1", "st_loggerr2")
+    out["srad_errw"] = _err_width(df, "st_raderr1", "st_raderr2")
+    out["insol_errw"] = _err_width(df, "pl_insolerr1", "pl_insolerr2")
+    out["eqt_errw"] = _err_width(df, "pl_eqterr1", "pl_eqterr2")
+
+    return out
+
+
+def _load_training_reference(engine: InferenceEngine, training_dir: str) -> pd.DataFrame:
+    parts = []
+    loaders = {
+        "Kepler": ("cumulative.csv", _prepare_training_kepler),
+        "TESS": ("toi.csv", _prepare_training_tess),
+        "K2": ("k2_planets_candidates.csv", _prepare_training_k2),
+    }
+    for mission, (fname, builder) in loaders.items():
+        path = os.path.join(training_dir, fname)
+        if not os.path.exists(path):
+            continue
+        raw = pd.read_csv(path, low_memory=False)
+        df_std = builder(raw)
+        df_std = df_std.dropna(subset=[INTERNAL["id"]])
+        try:
+            harmonized = engine._harmonize_df(df_std)
+            parts.append(harmonized)
+        except Exception as exc:  # pragma: no cover - defensive
+            print(f"Warning: unable to harmonize training file {fname}: {exc}", file=sys.stderr)
+    if parts:
+        return pd.concat(parts, axis=0, ignore_index=True)
+    return pd.DataFrame()
+
+
+def _safe_float(value: Any) -> Optional[float]:
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not np.isfinite(f):
+        return None
+    return float(f)
+
+
+def _format_range(lo: float, hi: float) -> str:
+    if not np.isfinite(lo) or not np.isfinite(hi):
+        return "—"
+
+    def fmt(x: float) -> str:
+        ax = abs(x)
+        if ax >= 10000 or (0 < ax < 1e-3):
+            return f"{x:.2e}"
+        if ax >= 100:
+            return f"{x:.0f}"
+        if ax >= 10:
+            return f"{x:.1f}"
+        return f"{x:.2f}"
+
+    return f"{fmt(lo)}–{fmt(hi)}"
+
+
+FEATURE_SPECS = [
+    {"feature": INTERNAL["period_days"], "label": "Orbital period (days)", "log": True},
+    {"feature": INTERNAL["duration_hours"], "label": "Transit duration (hours)", "log": True},
+    {"feature": INTERNAL["depth_ppm"], "label": "Transit depth (ppm)", "log": True},
+    {"feature": INTERNAL["planet_radius_re"], "label": "Planet radius (R⊕)", "log": False},
+    {"feature": INTERNAL["stellar_teff_k"], "label": "Stellar Teff (K)", "log": False},
+    {"feature": INTERNAL["stellar_radius_rsun"], "label": "Stellar radius (R☉)", "log": False},
+    {"feature": INTERNAL["snr_like"], "label": "Pipeline SNR", "log": True},
+    {"feature": "duty_cycle", "label": "Duty cycle", "log": False},
+    {"feature": "depth_per_hour", "label": "Depth per hour", "log": True},
+    {"feature": "depth_over_radii_model", "label": "Depth / radii model", "log": True},
+    {"feature": "snr_proxy", "label": "Proxy SNR", "log": True},
+    {"feature": "eqt_over_teff", "label": "Equilibrium/Teff", "log": False},
+]
+
+OUTLIER_FEATURES = [
+    (INTERNAL["depth_ppm"], "ppm"),
+    (INTERNAL["planet_radius_re"], "R⊕"),
+    (INTERNAL["stellar_teff_k"], "K"),
+    ("depth_over_radii_model", "ratio"),
+    ("snr_proxy", ""),
+    ("duty_cycle", "fraction"),
+]
+
+SCATTER_SPECS = [
+    {
+        "id": "period_depth",
+        "label": "Period vs depth",
+        "x": INTERNAL["period_days"],
+        "y": INTERNAL["depth_ppm"],
+        "xLabel": "Period (days)",
+        "yLabel": "Depth (ppm)",
+        "logX": True,
+        "logY": True,
+    },
+    {
+        "id": "period_duration",
+        "label": "Period vs duration",
+        "x": INTERNAL["period_days"],
+        "y": INTERNAL["duration_hours"],
+        "xLabel": "Period (days)",
+        "yLabel": "Duration (hours)",
+        "logX": True,
+        "logY": True,
+    },
+    {
+        "id": "radius_depth",
+        "label": "Radius vs depth",
+        "x": INTERNAL["planet_radius_re"],
+        "y": INTERNAL["depth_ppm"],
+        "xLabel": "Planet radius (R⊕)",
+        "yLabel": "Depth (ppm)",
+        "logX": False,
+        "logY": True,
+    },
+    {
+        "id": "teff_eqt",
+        "label": "Teff vs equilibrium",
+        "x": INTERNAL["stellar_teff_k"],
+        "y": INTERNAL["eqt_k"],
+        "xLabel": "Stellar Teff (K)",
+        "yLabel": "Equilibrium temp (K)",
+        "logX": False,
+        "logY": False,
+    },
+]
+
+
+def _compute_histogram_stats(
+    scoring: pd.DataFrame,
+    training: pd.DataFrame,
+    feature: str,
+    label: str,
+    log_scale: bool,
+):
+    scoring_series = pd.to_numeric(scoring.get(feature), errors="coerce")
+    training_series = pd.to_numeric(training.get(feature), errors="coerce") if not training.empty else pd.Series(dtype=float)
+
+    combined = pd.concat([scoring_series, training_series], ignore_index=True)
+    combined = combined.replace([np.inf, -np.inf], np.nan).dropna()
+    if log_scale:
+        combined = combined[combined > 0]
+
+    if combined.empty:
+        edges = np.linspace(0.0, 1.0, 11)
+    else:
+        lo = combined.min()
+        hi = combined.max()
+        if log_scale:
+            lo = max(lo, 1e-9)
+            hi = max(hi, lo * 1.0001)
+            edges = np.logspace(np.log10(lo), np.log10(hi), 11)
+        else:
+            if hi == lo:
+                hi = lo + 1.0
+            edges = np.linspace(lo, hi, 11)
+
+    scoring_counts: Dict[str, np.ndarray] = {}
+    training_counts: Dict[str, np.ndarray] = {}
+    for mission in MISSIONS:
+        s_mask = scoring[INTERNAL["mission"]] == mission
+        s_vals = scoring_series[s_mask].replace([np.inf, -np.inf], np.nan).dropna()
+        if log_scale:
+            s_vals = s_vals[s_vals > 0]
+        s_hist, _ = np.histogram(s_vals.to_numpy(), bins=edges)
+        scoring_counts[mission] = s_hist
+
+        if training.empty:
+            training_counts[mission] = np.zeros(len(edges) - 1, dtype=int)
+        else:
+            t_mask = training[INTERNAL["mission"]] == mission
+            t_vals = training_series[t_mask].replace([np.inf, -np.inf], np.nan).dropna()
+            if log_scale:
+                t_vals = t_vals[t_vals > 0]
+            t_hist, _ = np.histogram(t_vals.to_numpy(), bins=edges)
+            training_counts[mission] = t_hist
+
+    bins_payload = []
+    for idx in range(len(edges) - 1):
+        bins_payload.append(
+            {
+                "bin": _format_range(edges[idx], edges[idx + 1]),
+                "missions": {mission: int(scoring_counts[mission][idx]) for mission in MISSIONS},
+            }
+        )
+
+    return {
+        "config": {
+            "feature": feature,
+            "label": label,
+            "logScale": log_scale,
+            "bins": bins_payload,
+        },
+        "edges": edges,
+        "scoring_counts": scoring_counts,
+        "training_counts": training_counts,
+    }
+
+
+def _compute_quantile_payload(
+    scoring: pd.DataFrame,
+    training: pd.DataFrame,
+    feature: str,
+    log_scale: bool,
+    edges: np.ndarray,
+    scoring_counts: Dict[str, np.ndarray],
+):
+    items = []
+    scoring_series = pd.to_numeric(scoring.get(feature), errors="coerce")
+    training_series = pd.to_numeric(training.get(feature), errors="coerce") if not training.empty else pd.Series(dtype=float)
+
+    for mission in MISSIONS:
+        t_mask = training[INTERNAL["mission"]] == mission if not training.empty else pd.Series(dtype=bool)
+        t_vals = training_series[t_mask].replace([np.inf, -np.inf], np.nan).dropna()
+        if log_scale:
+            t_vals = t_vals[t_vals > 0]
+
+        if not t_vals.empty:
+            train_quant = {
+                "p10": _safe_float(t_vals.quantile(0.10)),
+                "median": _safe_float(t_vals.quantile(0.50)),
+                "p90": _safe_float(t_vals.quantile(0.90)),
+                "p5": _safe_float(t_vals.quantile(0.05)),
+                "p95": _safe_float(t_vals.quantile(0.95)),
+                "iqr": _safe_float(t_vals.quantile(0.75) - t_vals.quantile(0.25)),
+            }
+        else:
+            train_quant = {"p10": None, "median": None, "p90": None, "p5": None, "p95": None, "iqr": None}
+
+        items.append(
+            {
+                "feature": feature,
+                "mission": mission,
+                "logScale": log_scale,
+                "train": train_quant,
+                "scoring": {
+                    "edges": edges.tolist(),
+                    "counts": scoring_counts[mission].astype(int).tolist(),
+                },
+            }
+        )
+
+    return items
+
+
+def _compute_outliers(scoring: pd.DataFrame) -> list[dict[str, Any]]:
+    rows = []
+    ids = scoring[INTERNAL["id"]].astype(str)
+    for feature, units in OUTLIER_FEATURES:
+        series = pd.to_numeric(scoring.get(feature), errors="coerce").replace([np.inf, -np.inf], np.nan)
+        if series is None:
+            continue
+        for mission in MISSIONS:
+            mask = scoring[INTERNAL["mission"]] == mission
+            vals = series[mask].dropna()
+            if len(vals) < 5:
+                continue
+            mean = vals.mean()
+            std = vals.std(ddof=0)
+            if std == 0 or np.isnan(std):
+                continue
+            zscores = (vals - mean) / std
+            p1 = vals.quantile(0.01)
+            p99 = vals.quantile(0.99)
+            flagged = vals[(np.abs(zscores) > 3) | (vals < p1) | (vals > p99)]
+            for idx, value in flagged.items():
+                rows.append(
+                    {
+                        "id": ids.loc[idx],
+                        "mission": mission,
+                        "feature": feature,
+                        "zScore": _safe_float(zscores.loc[idx]) or 0.0,
+                        "value": _safe_float(value) or 0.0,
+                        "units": units,
+                    }
+                )
+    rows.sort(key=lambda item: abs(item.get("zScore", 0.0)), reverse=True)
+    return rows[:20]
+
+
+def _compute_duplicates(scoring: pd.DataFrame) -> dict[str, Any]:
+    ids = scoring[INTERNAL["id"]].astype(str)
+    id_counts = ids.value_counts()
+    dup_ids = int((id_counts > 1).sum())
+    dup_rows = int(id_counts[id_counts > 1].sum())
+    dup_mission = (
+        scoring.loc[ids.isin(id_counts[id_counts > 1].index), INTERNAL["mission"]]
+        .value_counts()
+        .reindex(MISSIONS, fill_value=0)
+    )
+
+    star_mult = scoring.get("star_multiplicity", pd.Series(dtype=float))
+    star_counts = []
+    if star_mult is not None and not star_mult.empty:
+        counts = star_mult.value_counts().sort_index()
+        for mult, count in counts.items():
+            star_counts.append({"value": int(mult), "count": int(count)})
+
+    return {
+        "duplicateIds": dup_ids,
+        "duplicateRows": dup_rows,
+        "perMission": {mission: int(dup_mission.get(mission, 0)) for mission in MISSIONS},
+        "starMultiplicity": star_counts,
+    }
+
+
+def _compute_score_histogram(preds: pd.DataFrame) -> list[dict[str, Any]]:
+    scores = pd.to_numeric(preds.get("P(planet)"), errors="coerce").fillna(0.0)
+    edges = np.linspace(0.0, 1.0, 11)
+    mission_counts = {}
+    for mission in MISSIONS:
+        mask = preds[INTERNAL["mission"]] == mission
+        hist, _ = np.histogram(scores[mask], bins=edges)
+        mission_counts[mission] = hist
+
+    payload = []
+    for idx in range(len(edges) - 1):
+        entry = {
+            "lower": float(edges[idx]),
+            "upper": float(edges[idx + 1]),
+            "total": int(sum(mission_counts[mission][idx] for mission in MISSIONS)),
+            "missions": {mission: int(mission_counts[mission][idx]) for mission in MISSIONS},
+        }
+        payload.append(entry)
+    return payload
+
+
+def _compute_threshold_snapshots(
+    preds: pd.DataFrame,
+    scores: np.ndarray,
+    labels: Optional[np.ndarray],
+    pr_auc: Optional[float],
+    roc_auc: Optional[float],
+    brier_score: Optional[float],
+) -> list[dict[str, Any]]:
+    thresholds = np.linspace(0, 1, 21)
+    snapshots = []
+    for thr in thresholds:
+        matrix = {"tp": 0, "fp": 0, "fn": 0, "tn": 0}
+        f1 = None
+        recall = None
+        if labels is not None:
+            preds_bin = (scores >= thr).astype(int)
+            tp = int(((labels == 1) & (preds_bin == 1)).sum())
+            fp = int(((labels == 0) & (preds_bin == 1)).sum())
+            fn = int(((labels == 1) & (preds_bin == 0)).sum())
+            tn = int(((labels == 0) & (preds_bin == 0)).sum())
+            matrix = {"tp": tp, "fp": fp, "fn": fn, "tn": tn}
+
+            prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+            rec = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+            recall = rec
+            if prec + rec > 0:
+                f1 = 2 * prec * rec / (prec + rec)
+            else:
+                f1 = 0.0
+
+        snapshots.append(
+            {
+                "threshold": float(thr),
+                "prAuc": pr_auc,
+                "rocAuc": roc_auc,
+                "brier": brier_score,
+                "f1": f1,
+                "recall": recall,
+                "matrix": matrix,
+            }
+        )
+    return snapshots
+
+
+def _load_feature_importance(bundle_dir: str) -> list[dict[str, Any]]:
+    path = os.path.join(bundle_dir, "metrics.json")
+    if not os.path.exists(path):
+        return []
+    try:
+        data = json.load(open(path))
+    except Exception:  # pragma: no cover - defensive
+        return []
+    items = data.get("feature_importance_A_top20") or []
+    out = []
+    for item in items:
+        feature = item.get("feature")
+        gain = _safe_float(item.get("avg_gain"))
+        if feature is None or gain is None:
+            continue
+        out.append({"feature": feature, "gain": gain})
+    out.sort(key=lambda x: x["gain"], reverse=True)
+    return out[:20]
+
+
+def _sanitize(obj: Any):
+    if isinstance(obj, pd.DataFrame):
+        return _sanitize(obj.to_dict(orient="records"))
+    if isinstance(obj, pd.Series):
+        return _sanitize(obj.to_dict())
+    if isinstance(obj, np.ndarray):
+        return _sanitize(obj.tolist())
+    if isinstance(obj, dict):
+        return {k: _sanitize(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize(v) for v in obj]
+    if isinstance(obj, (np.floating, float)):
+        return _safe_float(obj)
+    if isinstance(obj, (np.integer, int)):
+        return int(obj)
+    return obj
+
+
+def build_visualization_payload(
+    bundle_dir: str,
+    csv_path: str,
+    training_dir: str,
+) -> Dict[str, Any]:
+    eng = InferenceEngine(bundle_dir)
+    raw = load_any_csv(csv_path)
+    scoring = eng._harmonize_df(raw)
+    training = _load_training_reference(eng, training_dir)
+
+    pred_out = eng.predict_df(raw, use_per_mission=True)
+    preds_df = pred_out.get("preds")
+    if isinstance(preds_df, pd.DataFrame):
+        preds = preds_df.copy()
+    else:
+        preds = pd.DataFrame(preds_df or [])
+
+    scores = pd.to_numeric(preds.get("P(planet)"), errors="coerce").fillna(0.0).to_numpy()
+    missions_series = scoring[INTERNAL["mission"]].astype(str)
+
+    mission_mix = (
+        missions_series.value_counts().reindex(MISSIONS, fill_value=0).reset_index().rename(columns={"index": "mission", INTERNAL["mission"]: "count"})
+    )
+    mission_mix_payload = [
+        {"mission": row["mission"], "count": int(row["count"])} for _, row in mission_mix.iterrows()
+    ]
+
+    missing_cols = [c for c in scoring.columns if c.endswith("__missing")]
+    missing_payload = []
+    for col in missing_cols:
+        for mission in MISSIONS:
+            mask = missions_series == mission
+            if mask.any():
+                rate = scoring.loc[mask, col].astype(float).mean()
+            else:
+                rate = 0.0
+            missing_payload.append({"feature": col, "mission": mission, "missingRate": float(rate or 0.0)})
+
+    histogram_results = []
+    quantile_payload = []
+    drift_payload = []
+    for spec in FEATURE_SPECS:
+        feature = spec["feature"]
+        if feature not in scoring.columns:
+            continue
+        result = _compute_histogram_stats(scoring, training, feature, spec["label"], spec["log"])
+        histogram_results.append(result["config"])
+        quantile_payload.extend(
+            _compute_quantile_payload(
+                scoring,
+                training,
+                feature,
+                spec["log"],
+                result["edges"],
+                result["scoring_counts"],
+            )
+        )
+
+        for mission in MISSIONS:
+            train_counts = result["training_counts"].get(mission)
+            score_counts = result["scoring_counts"].get(mission)
+            if train_counts is None or score_counts is None:
+                continue
+            train_vals = pd.to_numeric(training.get(feature), errors="coerce") if not training.empty else pd.Series(dtype=float)
+            train_vals = train_vals[training[INTERNAL["mission"]] == mission] if not training.empty else pd.Series(dtype=float)
+            train_vals = train_vals.replace([np.inf, -np.inf], np.nan).dropna()
+            if spec["log"]:
+                train_vals = train_vals[train_vals > 0]
+
+            score_vals = pd.to_numeric(scoring.get(feature), errors="coerce")
+            score_vals = score_vals[missions_series == mission].replace([np.inf, -np.inf], np.nan).dropna()
+            if spec["log"]:
+                score_vals = score_vals[score_vals > 0]
+
+            if not train_vals.empty:
+                train_median = train_vals.median()
+                train_q25 = train_vals.quantile(0.25)
+                train_q75 = train_vals.quantile(0.75)
+                train_iqr = train_q75 - train_q25
+                train_p5 = train_vals.quantile(0.05)
+                train_p95 = train_vals.quantile(0.95)
+                train_p = train_counts.astype(float)
+                score_p = score_counts.astype(float)
+                train_prob = train_p / train_p.sum() if train_p.sum() > 0 else np.ones_like(train_p) / len(train_p)
+                score_prob = score_p / score_p.sum() if score_p.sum() > 0 else np.ones_like(score_p) / len(score_p)
+                mask = (train_prob > 0) & (score_prob > 0)
+                if mask.any():
+                    kl = float(np.sum(score_prob[mask] * np.log((score_prob[mask] + 1e-12) / (train_prob[mask] + 1e-12))))
+                else:
+                    kl = 0.0
+                if train_iqr == 0 or np.isnan(train_iqr):
+                    delta = None
+                else:
+                    delta = _safe_float((score_vals.median() - train_median) / train_iqr)
+                if train_p95 is not None and train_p5 is not None:
+                    coverage = float(((score_vals >= train_p5) & (score_vals <= train_p95)).mean()) if len(score_vals) else 0.0
+                else:
+                    coverage = 0.0
+            else:
+                delta = None
+                kl = 0.0
+                coverage = 0.0
+
+            drift_payload.append(
+                {
+                    "feature": feature,
+                    "mission": mission,
+                    "delta": delta,
+                    "kl": kl,
+                    "coverage": coverage,
+                }
+            )
+
+    scatter_payload = []
+    ids = scoring[INTERNAL["id"]].astype(str)
+    for spec in SCATTER_SPECS:
+        x_vals = pd.to_numeric(scoring.get(spec["x"]), errors="coerce")
+        y_vals = pd.to_numeric(scoring.get(spec["y"]), errors="coerce")
+        points = []
+        for idx in scoring.index:
+            x = x_vals.at[idx]
+            y = y_vals.at[idx]
+            if np.isnan(x) or np.isnan(y):
+                continue
+            if spec.get("logX") and x <= 0:
+                continue
+            if spec.get("logY") and y <= 0:
+                continue
+            px = float(np.log10(x)) if spec.get("logX") else float(x)
+            py = float(np.log10(y)) if spec.get("logY") else float(y)
+            points.append(
+                {
+                    "id": f"{spec['id']}-{idx}",
+                    "mission": missions_series.at[idx],
+                    "x": px,
+                    "y": py,
+                }
+            )
+        if len(points) > 600:
+            points = points[:600]
+        scatter_payload.append(
+            {
+                "id": spec["id"],
+                "label": spec["label"],
+                "xLabel": spec["xLabel"],
+                "yLabel": spec["yLabel"],
+                "logX": spec.get("logX", False),
+                "logY": spec.get("logY", False),
+                "points": points,
+            }
+        )
+
+    outliers_payload = _compute_outliers(scoring)
+    duplicates_payload = _compute_duplicates(scoring)
+    score_hist_payload = _compute_score_histogram(preds)
+
+    curves = pred_out.get("curves") or {}
+    pr_curve = curves.get("pr", {})
+    roc_curve = curves.get("roc", {})
+    cal_curve = curves.get("calibration", [])
+
+    pr_points = []
+    if pr_curve:
+        precision = pr_curve.get("precision", [])
+        recall_vals = pr_curve.get("recall", [])
+        pr_points = [
+            {"x": _safe_float(rec), "y": _safe_float(prec)}
+            for prec, rec in zip(precision, recall_vals)
+            if _safe_float(rec) is not None and _safe_float(prec) is not None
+        ]
+    roc_points = []
+    if roc_curve:
+        fpr = roc_curve.get("fpr", [])
+        tpr = roc_curve.get("tpr", [])
+        roc_points = [
+            {"x": _safe_float(f), "y": _safe_float(t)}
+            for f, t in zip(fpr, tpr)
+            if _safe_float(f) is not None and _safe_float(t) is not None
+        ]
+    cal_points = []
+    for entry in cal_curve:
+        pm = entry.get("p_mean")
+        emp = entry.get("empirical")
+        if emp is None:
+            continue
+        cal_points.append({"x": _safe_float(pm), "y": _safe_float(emp)})
+
+    labels_series = scoring.get(INTERNAL["label"])
+    label_binary = None
+    if labels_series is not None:
+        mapped = labels_series.astype(str).map({PLANET: 1, CAND: 0, FP: 0})
+        if mapped.notna().any():
+            label_binary = mapped.fillna(0).astype(int).to_numpy()
+
+    metrics = pred_out.get("metrics") or {}
+    snapshots = _compute_threshold_snapshots(
+        preds,
+        scores,
+        label_binary,
+        _safe_float(metrics.get("PR_AUC")),
+        _safe_float(metrics.get("ROC_AUC")),
+        _safe_float(metrics.get("Brier")),
+    )
+
+    threshold_used = pred_out.get("threshold_used")
+    per_mission_thr = pred_out.get("per_mission_thresholds") or {}
+
+    mission_acceptance_payload = []
+    for mission in MISSIONS:
+        thr = per_mission_thr.get(mission, threshold_used)
+        thr = thr if isinstance(thr, (int, float)) else threshold_used
+        mission_scores = scores[preds[INTERNAL["mission"]] == mission]
+        accepted = int((mission_scores >= (thr or 0.5)).sum())
+        total = int((preds[INTERNAL["mission"]] == mission).sum())
+        mission_acceptance_payload.append(
+            {
+                "mission": mission,
+                "accepted": accepted,
+                "rejected": max(total - accepted, 0),
+            }
+        )
+
+    candidates_payload = []
+    if not preds.empty:
+        merged = preds.merge(
+            scoring[[INTERNAL["id"], INTERNAL["mission"], INTERNAL["period_days"], INTERNAL["duration_hours"], INTERNAL["depth_ppm"], "snr_proxy", "depth_over_radii_model"]],
+            left_on=INTERNAL["id"],
+            right_on=INTERNAL["id"],
+            how="left",
+        )
+        merged = merged.sort_values("P(planet)", ascending=False).head(100)
+        for _, row in merged.iterrows():
+            candidates_payload.append(
+                {
+                    "id": row[INTERNAL["id"]],
+                    "mission": row[INTERNAL["mission"]],
+                    "score": _safe_float(row.get("P(planet)")),
+                    "predictedClass": row.get("PredictedClass"),
+                    "confidence": row.get("Confidence"),
+                    "period_days": _safe_float(row.get(INTERNAL["period_days"])),
+                    "duration_hours": _safe_float(row.get(INTERNAL["duration_hours"])),
+                    "depth_ppm": _safe_float(row.get(INTERNAL["depth_ppm"])),
+                    "snr_proxy": _safe_float(row.get("snr_proxy")),
+                    "depth_over_radii_model": _safe_float(row.get("depth_over_radii_model")),
+                }
+            )
+
+    feature_importance_payload = _load_feature_importance(bundle_dir)
+
+    payload = {
+        "missionMix": mission_mix_payload,
+        "missingness": missing_payload,
+        "duplicates": duplicates_payload,
+        "histograms": histogram_results,
+        "scatter": scatter_payload,
+        "outliers": outliers_payload,
+        "quantiles": quantile_payload,
+        "drift": drift_payload,
+        "scoreHistogram": score_hist_payload,
+        "prCurve": pr_points,
+        "rocCurve": roc_points,
+        "calibration": cal_points,
+        "missionAcceptance": mission_acceptance_payload,
+        "thresholdSnapshots": snapshots,
+        "candidates": candidates_payload,
+        "featureImportance": feature_importance_payload,
+        "shapExample": None,
+        "thresholdUsed": threshold_used,
+        "perMissionThresholds": per_mission_thr,
+    }
+
+    return _sanitize(payload)
+
+
+# =====================
 # Convenience: quick file->predict wrapper
 # =====================
 def predict_file(path_or_bytes, engine: InferenceEngine, **kwargs) -> Dict[str, Any]:
@@ -857,7 +1663,7 @@ if __name__ == "__main__":
     ap.add_argument("csv_path", nargs="?")
     ap.add_argument("--top_n", type=int, default=None)
     ap.add_argument("--thr", type=float, default=None)
-    ap.add_argument("--mode", choices=["validate", "predict"], default=None,
+    ap.add_argument("--mode", choices=["validate", "predict", "visualize"], default=None,
                     help="Optional CLI helper for the web app")
     ap.add_argument("--per_mission", action="store_true", default=True,
                     help="Use per-mission thresholds from thresholds.json")
@@ -900,6 +1706,14 @@ if __name__ == "__main__":
             print(json.dumps(payload, allow_nan=False))
         except Exception as e:
             print(json.dumps({"error": str(e)}))
+    elif args.mode == "visualize":
+        if not args.bundle_dir or not args.csv_path:
+            raise SystemExit("--mode visualize requires bundle_dir and csv_path")
+        training_dir = os.path.join(os.path.dirname(args.bundle_dir), "public", "training-reference")
+        if not os.path.exists(training_dir):
+            training_dir = os.path.join(os.path.dirname(__file__), "public", "training-reference")
+        payload = build_visualization_payload(args.bundle_dir, args.csv_path, training_dir)
+        print(json.dumps(payload, allow_nan=False))
     else:
         if not args.bundle_dir or not args.csv_path:
             raise SystemExit("Usage: python exo_infer.py BUNDLE_DIR CSV_PATH [--top_n N | --thr T]")

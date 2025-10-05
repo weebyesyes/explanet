@@ -40,6 +40,33 @@
   opacity: 0.7;
 }
 
+.uploadForm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.uploadForm button {
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(90deg, #7f8cff, #df6ac9);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.uploadForm button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error {
+  color: #ff7b7b;
+  margin: 6px 0 0;
+}
+
 .grid {
   display: grid;
   gap: 20px;
@@ -213,6 +240,13 @@
 .metricValue {
   font-size: 22px;
   font-weight: 600;
+}
+
+.duplicateCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 13px;
 }
 
 .chartCanvas {
