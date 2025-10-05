@@ -159,6 +159,13 @@ const missionPalette: Record<MissionKey, string> = {
   K2: "#7f8cff",
 };
 
+const num = (v: number | null | undefined, fallback = 0) =>
+  typeof v === "number" && Number.isFinite(v) ? v : fallback;
+
+const nfmt = (v: number | null | undefined, digits = 2) =>
+  typeof v === "number" && Number.isFinite(v) ? v.toFixed(digits) : "—";
+
+
 function ChartCard({
   title,
   subtitle,
@@ -438,6 +445,7 @@ function QuantileRibbonChart({ config }: { config: QuantileRibbon }) {
       <svg viewBox="0 0 320 200" className={styles.chartCanvas}>
         <rect x={28} y={20} width={plotWidth} height={plotHeight} fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.1)" />
         {counts.map((count, idx) => {
+          if (idx >= transformedEdges.length - 1) return null;
           const lo = transformedEdges[idx];
           const hi = transformedEdges[idx + 1];
           const width = ((hi - lo) / (maxEdge - minEdge || 1)) * plotWidth;
@@ -481,7 +489,8 @@ function DriftBars({ snapshots }: { snapshots: DriftSnapshot[] }) {
           {(["Kepler", "TESS", "K2"] as MissionKey[]).map((mission) => {
             const entry = snapshots.find((item) => item.feature === feature && item.mission === mission);
             if (!entry) return null;
-            const width = Math.min(100, Math.abs(entry.delta) * 100);
+            const d = num(entry.delta, 0);
+            const width = Math.min(100, Math.abs(d) * 100);
             return (
               <div key={mission} className={styles.sparkbarRow}>
                 <span style={{ width: 60 }}>{mission}</span>
@@ -490,11 +499,11 @@ function DriftBars({ snapshots }: { snapshots: DriftSnapshot[] }) {
                     className={styles.sparkbarFill}
                     style={{
                       width: `${width}%`,
-                      background: entry.delta >= 0 ? "#00dfd8" : "#df6ac9",
+                      background: d >= 0 ? "#00dfd8" : "#df6ac9",
                     }}
                   />
                 </div>
-                <span>{entry.delta.toFixed(2)}</span>
+                <span>{nfmt(entry.delta, 2)}</span>
               </div>
             );
           })}
@@ -525,11 +534,11 @@ function KLTable({ snapshots }: { snapshots: DriftSnapshot[] }) {
               <td>{feature}</td>
               {missions.map((mission) => {
                 const entry = snapshots.find((snap) => snap.feature === feature && snap.mission === mission);
-                const value = entry?.kl ?? 0;
+                const value = num(entry?.kl, 0);
                 const background = `rgba(127, 140, 255, ${Math.min(0.85, value * 3)})`;
                 return (
                   <td key={mission} style={{ background }}>
-                    {value.toFixed(2)}
+                    {nfmt(value, 2)}
                   </td>
                 );
               })}
@@ -566,7 +575,7 @@ function CoverageHeatmap({ snapshots }: { snapshots: DriftSnapshot[] }) {
                 const background = `rgba(0, 223, 216, ${0.15 + value * 0.6})`;
                 return (
                   <td key={mission} style={{ background }}>
-                    {(value * 100).toFixed(0)}%
+                    {nfmt(value * 100, 0)}%
                   </td>
                 );
               })}
@@ -799,13 +808,13 @@ function TopCandidatesTable({ rows }: { rows: CandidateRow[] }) {
             <tr key={row.id}>
               <td>{row.id}</td>
               <td>{row.mission}</td>
-              <td>{row.score != null ? row.score.toFixed(2) : "—"}</td>
+              <td>{nfmt(row.score, 2)}</td>
               <td>{row.predictedClass ?? "—"}</td>
               <td>{row.confidence ?? "—"}</td>
-              <td>{row.period_days != null ? row.period_days.toFixed(2) : "—"}</td>
-              <td>{row.duration_hours != null ? row.duration_hours.toFixed(1) : "—"}</td>
-              <td>{row.depth_ppm != null ? row.depth_ppm.toLocaleString() : "—"}</td>
-              <td>{row.snr_proxy != null ? row.snr_proxy.toFixed(1) : "—"}</td>
+              <td>{nfmt(row.period_days, 2)}</td>
+              <td>{nfmt(row.duration_hours, 1)}</td>
+              <td>{row.depth_ppm != null && Number.isFinite(row.depth_ppm) ? row.depth_ppm.toLocaleString() : "—"}</td>
+              <td>{nfmt(row.snr_proxy, 1)}</td>
               <td>
                 {row.depth_over_radii_model != null
                   ? row.depth_over_radii_model.toFixed(2)
@@ -832,7 +841,7 @@ function FeatureImportanceChart({ rows }: { rows: FeatureImportanceRow[] }) {
               style={{ width: `${(row.gain / (maxGain || 1)) * 100}%`, background: "#7f8cff" }}
             />
           </div>
-          <span>{(row.gain * 100).toFixed(1)}%</span>
+          <span>{nfmt(row.gain * 100, 1)}%</span>
         </div>
       ))}
     </div>

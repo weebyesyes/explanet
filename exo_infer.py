@@ -1589,11 +1589,11 @@ def build_visualization_payload(
     candidates_payload = []
     if not preds.empty:
         merged = preds.merge(
-            scoring[[INTERNAL["id"], INTERNAL["mission"], INTERNAL["period_days"], INTERNAL["duration_hours"], INTERNAL["depth_ppm"], "snr_proxy", "depth_over_radii_model"]],
-            left_on=INTERNAL["id"],
-            right_on=INTERNAL["id"],
+            scoring[[INTERNAL["id"], INTERNAL["period_days"], INTERNAL["duration_hours"], INTERNAL["depth_ppm"], "snr_proxy", "depth_over_radii_model"]],
+            on=INTERNAL["id"],
             how="left",
         )
+
         merged = merged.sort_values("P(planet)", ascending=False).head(100)
         for _, row in merged.iterrows():
             candidates_payload.append(
