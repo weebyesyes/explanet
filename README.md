@@ -74,6 +74,18 @@ pip install "scikit-learn==1.2.2"
 pip install "lightgbm==3.3.5" "xgboost==1.7.6" "catboost==1.2"
 ```
 
+Personally, the commands that worked for us to install the deps on gitbash is this:
+```
+# from your project folder
+rm -rf .venv
+/c/Windows/py.exe -3.10 -m venv .venv
+source .venv/Scripts/activate
+
+python -m pip install --upgrade pip
+python -m pip install "numpy==1.23.5" "scipy==1.9.3" "pandas==1.5.3" \
+                      "scikit-learn==1.2.2" "lightgbm==3.3.5" "xgboost==1.7.6" "catboost==1.2"
+```
+
 If a `requirements.txt` file is added later, prefer installing from that file:
 
 ```bash
