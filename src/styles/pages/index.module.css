@@ -7,14 +7,14 @@
 
 .title {
   margin-top: 120px;
-  font-size: 25px;
+  font-size: 40px;
   font-weight: 900;
-  background-color: #272a4f;
+  background: linear-gradient(90deg, #df6ac9, #bc50d7, #6840c4, #272a4f);
   padding: 8px;
   padding-left: 25px;
   padding-right: 25px;
-  border-radius: 25px;
-  box-shadow: 0px 0px 20px;
+  border-radius: 35px;
+  box-shadow: 0px 0px 30px;
 }
 
 .description {

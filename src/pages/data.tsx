@@ -1,4 +1,5 @@
 import { useState } from "react";
+import styles from "../styles/pages/data.module.css";
 
 type ValidatorIssue = {
   severity: string;
@@ -57,24 +58,16 @@ export default function DataValidatePage() {
   }
 
   return (
-    <div
-      style={{
-        maxWidth: 960,
-        margin: "0 auto",
-        padding: "2rem",
-        color: "#ffffff",
-      }}
-    >
-      <h1>Validate Observation Data</h1>
-      <p style={{ marginBottom: "1rem" }}>
-        Upload your candidate CSV to run the schema and sanity validator before prediction.
-      </p>
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div className={styles.container}>
+      <p className={styles.title}>Validate Observation Data</p>
+      <p style={{ marginBottom: "1rem", textAlign: 'center' }}>Upload your candidate CSV to run the schema and sanity validator before prediction.</p>
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: 'center' }}>
         <input
           type="file"
           accept=".csv,.zip"
           onChange={(event) => setFile(event.target.files?.[0] ?? null)}
           disabled={loading}
+          className={styles.inputFile}
         />
         <button type="submit" disabled={!file || loading}>
           {loading ? "Validating..." : "Validate"}
@@ -86,8 +79,8 @@ export default function DataValidatePage() {
       )}
 
       {result?.report && (
-        <div style={{ marginTop: "2rem" }}>
-          <h2>Validator Report</h2>
+        <div style={{ marginTop: "2rem", fontFamily: 'Cantarell', color: 'white', maxWidth: '100%' }}>
+          <p>Validator Report</p>
           <p>
             Status: <strong>{result.report.status}</strong> · Rows analysed: {result.report.row_count}
           </p>
@@ -97,7 +90,7 @@ export default function DataValidatePage() {
 
           {result.report.issues.length > 0 ? (
             <div>
-              <h3>Issues</h3>
+              <p>Issues</p>
               <ul>
                 {result.report.issues.map((issue, idx) => (
                   <li key={`${issue.code}-${idx}`}>
@@ -112,7 +105,7 @@ export default function DataValidatePage() {
 
           <details style={{ marginTop: "1rem" }}>
             <summary>Raw JSON</summary>
-            <pre style={{ background: "#111", color: "#0f0", padding: "1rem", overflowX: "auto" }}>
+            <pre style={{ background: "#111", color: "#0f0", padding: "1rem", overflowX: 'auto', borderRadius: 10 }}>
               {JSON.stringify(result.report, null, 2)}
             </pre>
           </details>

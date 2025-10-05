@@ -180,7 +180,7 @@ function ChartCard({
   return (
     <div className={styles.card}>
       <div className={styles.cardHeader}>
-        <h3>{title}</h3>
+        <p>{title}</p>
         {subtitle && <span>{subtitle}</span>}
       </div>
       {actions && <div className={styles.toolbar}>{actions}</div>}
@@ -610,7 +610,7 @@ function ScoreHistogram({
           onChange={() => {}}
           disabled
         />
-        <p style={{ marginTop: 12, opacity: 0.7 }}>Upload a CSV to view score distributions.</p>
+        <p style={{ marginTop: 12, color: "#fff" }}>Upload a CSV to view score distributions.</p>
       </div>
     );
   }
@@ -1022,8 +1022,8 @@ export default function VisualizePage() {
       <div className={styles.pageContent}>
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
-            <h2>Visualize</h2>
-            <p>Upload a CSV to audit its health, compare against training corpora, and inspect model outputs.</p>
+            <p className={styles.title  }>Visualize</p>
+            <p style={{ marginBottom: "1rem", textAlign: 'center' }}>Upload a CSV to audit its health, compare against training corpora, and inspect model outputs.</p>
           </div>
           <form className={styles.uploadForm} onSubmit={handleSubmit}>
             <input
@@ -1031,6 +1031,7 @@ export default function VisualizePage() {
               accept=".csv,.zip"
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
               disabled={loading}
+              className={styles.inputFile}
             />
             <button type="submit" disabled={!file || loading}>
               {loading ? "Processing..." : "Generate dashboard"}
@@ -1043,7 +1044,7 @@ export default function VisualizePage() {
           <>
             <section className={styles.section}>
               <div className={styles.sectionHeader}>
-                <h2>A · Data overview &amp; QC</h2>
+                <p>A · Data overview &amp; QC</p>
                 <p>Mission composition, missingness, duplicates, distributions, and notable outliers.</p>
               </div>
               <div className={`${styles.grid} ${styles.gridThree}`}>
@@ -1100,7 +1101,7 @@ export default function VisualizePage() {
 
             <section className={styles.section}>
               <div className={styles.sectionHeader}>
-                <h2>B · Compare to training</h2>
+                <p>B · Compare to training</p>
                 <p>Distribution drift versus the bundled KOI/TOI/K2 training corpora.</p>
               </div>
               <div className={`${styles.grid} ${styles.gridTwo}`}>
@@ -1127,7 +1128,7 @@ export default function VisualizePage() {
 
             <section className={styles.section}>
               <div className={styles.sectionHeader}>
-                <h2>C · Predictions &amp; thresholds</h2>
+                <p>C · Predictions &amp; thresholds</p>
                 <p>Score distributions, performance curves, confusion matrix, and candidate tables.</p>
               </div>
 
@@ -1194,7 +1195,7 @@ export default function VisualizePage() {
           </>
         ) : (
           <section className={styles.section}>
-            <p style={{ opacity: 0.7 }}>
+            <p style={{ color: "#fff" }}>
               No charts yet. Upload a candidate CSV that passes validation to explore its quality, compare to the bundled training
               corpora, and inspect prediction metrics.
             </p>
