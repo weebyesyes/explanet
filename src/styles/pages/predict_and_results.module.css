@@ -1,31 +1,16 @@
+.title {
+  font-size: 25px;
+  font-weight: 900;
+}
+
 .container {
   display: flex;
   flex: 1;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  flex-direction: column;
-}
-
-.inputFile {
-  all: unset;
-  color: white;
-  display: flex;
-  
-}
-
-.inputFile::file-selector-button {
-  all: unset;
-  font-family: 'Cantarell';
-  background-color: #6840c4;
-  color: white;
-  height: 40px;
-  width: 100px;
-  border-radius: 10px;
-  justify-content: center;
+  width: 80%;
+  max-width: 600px;
+  align-self: center;
   text-align: center;
-  display: flex;
-}
-
-.inputFile::file-selector-button:hover {
-  cursor: pointer;
 }

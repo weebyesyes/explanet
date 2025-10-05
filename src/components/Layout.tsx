@@ -1,6 +1,7 @@
 import { useState } from "react";
 import styles from "../styles/components/Layout.module.css";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [sidebarOpened, setSidebarOpened] = useState(false);
@@ -16,15 +17,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={styles.container}>
-      {children}
+      <div className={styles.content}>
+        {children}
+      </div>
 
       {sidebarOpened && (
-        <div className={`${styles.darkOverlay} ${sidebarOpened ? styles.darkOverlayOpened : ""}`} />
+        <div onClick={() => setSidebarOpened(false)} className={`${styles.darkOverlay} ${sidebarOpened ? styles.darkOverlayOpened : ""}`} />
       )}
 
       <div className={`${styles.sidebar} ${sidebarOpened ? styles.sidebarOpened : styles.sidebarClosed}`}>
         <div className={styles.sidebarContent}>
-          <p className={styles.title}>EXPLANET</p>
+          <Image src={require("../../public/images/logo.png")} alt="logo" width={180} className={styles.sidebarTitle} />
+
           <SidebarButton label="Home" destination="/" />
           <SidebarButton label="Data (Validator)" destination="data" />
           <SidebarButton label="Predict & Results" destination="predict_and_results" />

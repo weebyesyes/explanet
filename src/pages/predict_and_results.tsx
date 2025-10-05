@@ -96,21 +96,14 @@ export default function PredictPage() {
   }
 
   return (
-    <div
-      style={{
-        maxWidth: 1200,
-        margin: "0 auto",
-        padding: "2rem",
-        color: "#ffffff",
-      }}
-    >
-      <h1>Run Predictions</h1>
+    <div className={styles.container}>
+      <p className={styles.title}>Run Predictions</p>
       <p style={{ marginBottom: "1rem" }}>
         Upload a validated CSV to trigger the inference pipeline. The Python bundle will load the
         trained models, compute predictions, and return the tri-class outcomes.
       </p>
 
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}>
         <input
           type="file"
           accept=".csv,.zip"
@@ -119,7 +112,7 @@ export default function PredictPage() {
           className={styles.inputFile}
         />
         
-        <button type="submit" disabled={!file || loading}>
+        <button className={styles.submitButton} type="submit" disabled={!file || loading}>
           {loading ? "Running inference..." : "Predict"}
         </button>
       </form>

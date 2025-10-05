@@ -1,10 +1,23 @@
 .container {
-  background-color: black;
-  display: flex;
+  background-image: url("/images/background.png"); /* your image */
+  background-repeat: no-repeat;
+  background-size: 100% auto; /* image width fills container, height auto; gradient matches full container */
+  background-position: top, top;
+  background-attachment: scroll;
   width: 100%;
   min-height: 100vh;
-  position: relative;
+  display: flex;
   flex-direction: row;
+  position: relative;
+  background-color: black; /* ensures fade to black at bottom */
+  padding-bottom: 50px;
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  align-items: center;
 }
 
 .darkOverlay {
@@ -21,7 +34,7 @@
 
 .sidebar {
   background-color: black;
-  position: absolute;
+  position: fixed;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -51,17 +64,11 @@
   opacity: 0;
 }
 
-.title {
-  font-family: "Tomorrow";
-  font-weight: 900;
-  font-size: 30px;
-}
-
 .sidebarOpenButton {
   display: flex;
   top: 90px;
   left: 223px;
-  position: absolute;
+  position: fixed;
   transition: left 0.3s ease;
 }
 
@@ -93,6 +100,11 @@
   flex-direction: column;
   width: 100%;
   align-items: center;
+}
+
+.sidebarTitle {
+  margin-top: 40px;
+  margin-bottom: 20px;
 }
 
 .sidebarButton {

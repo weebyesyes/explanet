@@ -3,6 +3,10 @@
   --foreground: #171717;
 }
 
+html {
+  overflow-y: scroll;
+}
+
 body {
   height: 100%;
   width: 100%;
@@ -14,6 +18,68 @@ p {
   font-family: 'Cantarell';
   color: white;
 }
+
+button {
+  all: unset;
+  font-family: 'Cantarell';
+  background: linear-gradient(90deg, #df6ac9, #bc50d7, #6840c4, #272a4f);
+  color: white;
+  padding: 10px;
+  padding-left: 15px;
+  padding-right: 15px;
+  border-radius: 35px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  display: inline-flex;
+  margin-right: 10px;
+  transition: background 0.3s ease;
+  font-weight: 900;
+}
+
+button:hover:enabled {
+  cursor: pointer;
+  background: linear-gradient(270deg, #df6ac9, #bc50d7, #6840c4, #272a4f);
+  transition: background 0.3s ease;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+
+input {
+  color: white;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  font-size: 15px;
+}
+
+input::file-selector-button {
+  all: unset;
+  font-family: 'Cantarell';
+  background: linear-gradient(90deg, #df6ac9, #bc50d7, #6840c4, #272a4f);
+  color: white;
+  padding: 10px;
+  padding-left: 15px;
+  padding-right: 15px;
+  border-radius: 35px;
+  justify-content: center;
+  text-align: center;
+  display: inline-flex;
+  margin-right: 10px;
+  transition: background 0.3s ease;
+  font-weight: 900;
+}
+
+input::file-selector-button:hover {
+  cursor: pointer;
+  background: linear-gradient(270deg, #df6ac9, #bc50d7, #6840c4, #272a4f);
+  transition: background 0.3s ease;
+}
+
 
 #__next,
 :root {
