@@ -21,6 +21,7 @@ from typing import Dict, Tuple, List, Optional, Any
 import numpy as np
 import pandas as pd
 import joblib
+import re
 
 # ML libs (soft optional: if Cat/XGB not present, those families are skipped)
 import lightgbm as lgb
@@ -306,6 +307,16 @@ class ExoPreprocessor:
             use_col = _find_col(df, src_name) if src_name else None
             resolved[k] = use_col
             out[INTERNAL[k]] = pd.to_numeric(df[use_col], errors="coerce") if use_col else np.nan
+            
+        # pass through error-widths if present
+        ERRW = [
+            "period_errw","duration_errw","depth_errw","prad_errw",
+            "teff_errw","logg_errw","srad_errw","insol_errw","eqt_errw"
+        ]
+        for e in ERRW:
+            c = _find_col(df, e)
+            out[e] = pd.to_numeric(df[c], errors="coerce") if c else np.nan
+
 
         # K2 unit fix
         if mission == "K2" and not pd.isna(out[INTERNAL["depth_ppm"]]).all():
@@ -324,6 +335,12 @@ class ExoPreprocessor:
         dfs = []
         for mission, (df, spec) in parts.items():
             h = self._harmonize_one(df, spec, mission)
+            
+            # make sure all trained numeric features exist (avoid KeyError)
+            for c in self.numeric_features_:
+                if c not in h.columns:
+                    h[c] = np.nan
+
 
             # Impute + missing flags using training medians
             for c in self.numeric_features_:
@@ -345,10 +362,47 @@ class ExoPreprocessor:
             h["log_depth_ppm"]  = np.log1p(dppm)
             h["duty_cycle"]     = (dhours / (pdays * 24.0)).clip(0, 1)
             h["depth_per_hour"] = (dppm / dhours)
+            
+            # ---- physics ratios (match training) ----
+            Rp_re  = h[INTERNAL["planet_radius_re"]].clip(lower=1e-6)
+            Rs_rsun= h[INTERNAL["stellar_radius_rsun"]].clip(lower=1e-6)
+            dppm   = h[INTERNAL["depth_ppm"]].clip(lower=1e-9)
+
+            Rs_re  = Rs_rsun * self.RAD_EARTH_PER_SUN
+            expected_ppm = 1e6 * (Rp_re / Rs_re)**2
+            h["depth_over_radii_model"] = (dppm / expected_ppm).replace([np.inf, -np.inf], np.nan).fillna(1.0)
+
+            if "depth_errw" in h.columns:
+                h["snr_proxy"] = (dppm / (h["depth_errw"].replace(0, np.nan))).fillna(0)
+            else:
+                h["snr_proxy"] = dppm / np.sqrt(h[INTERNAL["duration_hours"]].clip(lower=1e-6))
+
+            if INTERNAL["eqt_k"] in h.columns and INTERNAL["stellar_teff_k"] in h.columns:
+                h["eqt_over_teff"] = (h[INTERNAL["eqt_k"]] / h[INTERNAL["stellar_teff_k"]]).replace([np.inf, -np.inf], np.nan).fillna(0)
+            else:
+                h["eqt_over_teff"] = 0.0
+
+            h["log_depth_over_radii_model"] = np.log1p(h["depth_over_radii_model"].clip(lower=1e-9))
+            h["log_snr_proxy"]              = np.log1p(h["snr_proxy"].clip(lower=1e-9))
+
 
             dfs.append(h)
 
         merged = pd.concat(dfs, axis=0, ignore_index=True)
+        
+        g = merged.groupby(INTERNAL["star_id"], sort=False)
+        merged["star_multiplicity"] = g[INTERNAL["id"]].transform("count")
+
+        for feat, asc in [(INTERNAL["depth_ppm"], False),
+                        (INTERNAL["snr_like"], False),
+                        (INTERNAL["period_days"], True)]:
+            if feat in merged.columns:
+                merged[f"{feat}__rank_in_star"] = g[feat].rank(method="average", ascending=asc)
+
+        if INTERNAL["depth_ppm"] in merged.columns:
+            merged["star_depth_mean"] = g[INTERNAL["depth_ppm"]].transform("mean")
+            merged["star_depth_std"]  = g[INTERNAL["depth_ppm"]].transform("std").fillna(0)
+            merged["star_depth_cv"]   = (merged["star_depth_std"] / (merged["star_depth_mean"].replace(0, np.nan))).fillna(0)
 
         # Per-mission winsorize + z, using stored params
         if self.fs.get("mission_standardize", False):
@@ -369,6 +423,11 @@ class ExoPreprocessor:
         # One-hot mission
         mission_ohe = pd.get_dummies(merged[INTERNAL["mission"]], prefix="mission", dummy_na=False)
         merged = pd.concat([merged, mission_ohe], axis=1)
+        for mcol in ["mission_Kepler","mission_TESS","mission_K2"]:
+            if mcol not in merged.columns:
+                merged[mcol] = 0
+                
+        
         return merged
 
 # Make unpickling robust if preprocess.pkl was dumped from a notebook (__main__)
@@ -406,17 +465,27 @@ class InferenceEngine:
         self.use_meta  = bool(self.thr.get("use_meta", False))
         self.bw        = self.thr.get("blend_weights", {"lgbm": 1.0, "cat": 0.0, "xgb": 0.0})
 
-        # Discover base models
-        self.families = {"lgb": {"A": [], "B": []}, "cat": {"A": [], "B": []}, "xgb": {"A": [], "B": []}}
+        # Discover base models (family -> stage -> seed -> [fold paths])
+        self.registry = {fam: {"A": {}, "B": {}} for fam in ["lgb", "cat", "xgb"]}
+
         for fname in os.listdir(bundle_dir):
             path = os.path.join(bundle_dir, fname)
-            if not os.path.isfile(path): 
+            if not (os.path.isfile(path) and fname.startswith("model_")):
                 continue
-            if fname.startswith("model_"):
-                parts = fname.split("_")
-                fam = parts[1]; stage = parts[2]
-                if fam in self.families and stage in ["A","B"]:
-                    self.families[fam][stage].append(path)
+            # expected: model_<fam>_<stage>_seed<k>_fold<j>.<ext>
+            m = re.search(r"^model_(lgb|cat|xgb)_(A|B)_seed(\d+)_fold(\d+)\.", fname)
+            if not m:
+                continue
+            fam = m.group(1)
+            stage = m.group(2)
+            seed = int(m.group(3))
+            self.registry[fam][stage].setdefault(seed, []).append(path)
+
+        # deterministic order used by meta
+        self.family_order = ["lgb", "cat", "xgb"]
+        self.seed_order = sorted(
+            set(s for fam in self.family_order for s in self.registry[fam]["A"].keys())
+        )
 
         # Load meta blender (if present)
         self.meta = None
@@ -522,6 +591,75 @@ class InferenceEngine:
             outs.append(proba)
         return outs
 
+    def _predict_one_path(self, fam: str, stage: str, path: str, X: pd.DataFrame) -> np.ndarray:
+        """Return binary probability (n,) for the given model path."""
+        n = len(X)
+        if fam == "lgb":
+            booster = lgb.Booster(model_file=path)
+            P = booster.predict(X, num_iteration=booster.best_iteration)
+            return np.asarray(P).reshape(-1)
+        elif fam == "cat" and CATBOOST_AVAILABLE:
+            clf = CatBoostClassifier()
+            clf.load_model(path)
+            P = np.array(clf.predict_proba(X))[:, 1]
+            return P.reshape(-1)
+        elif fam == "xgb" and XGB_AVAILABLE:
+            dm = xgb.DMatrix(X)
+            bst = xgb.Booster(model_file=path)
+            P = bst.predict(dm)
+            return np.asarray(P).reshape(-1)
+        else:
+            return np.full(n, np.nan, dtype=float)
+
+    def _family_seed_tri_probs(self, fam: str, X: pd.DataFrame) -> dict[int, np.ndarray]:
+        """
+        For one family, return {seed: tri_probs(n,3)} averaged over folds.
+        Two-stage: combine A(planet) & B(candidate) into 3-way probs:
+        Pplanet = pA
+        Pcand   = (1-pA)*pB
+        Pfp     = (1-pA)*(1-pB)
+        One-stage: if a family emitted tri-prob directly, use it; else map binary to tri.
+        """
+        if fam == "cat" and not CATBOOST_AVAILABLE:
+            return {}
+        if fam == "xgb" and not XGB_AVAILABLE:
+            return {}
+
+        out: dict[int, np.ndarray] = {}
+        seeds = sorted(self.registry[fam]["A"].keys())
+        for seed in seeds:
+            pathsA = sorted(self.registry[fam]["A"].get(seed, []))
+            if self.two_stage:
+                pathsB = sorted(self.registry[fam]["B"].get(seed, []))
+                k = min(len(pathsA), len(pathsB))
+                if k == 0:
+                    continue
+                tri_list = []
+                for pa, pb in zip(pathsA[:k], pathsB[:k]):
+                    pA = self._predict_one_path(fam, "A", pa, X)  # (n,)
+                    pB = self._predict_one_path(fam, "B", pb, X)  # (n,)
+                    P = np.zeros((len(X), 3), dtype=float)
+                    P[:, self.planet_idx]        = pA
+                    P[:, LABEL2ID[CAND]]         = (1.0 - pA) * pB
+                    P[:, LABEL2ID[FP]]           = (1.0 - pA) * (1.0 - pB)
+                    tri_list.append(P)
+                out[seed] = np.mean(tri_list, axis=0)
+            else:
+                # one-stage: if models emit tri-prob we would use it; in this project they’re binary → map to tri
+                tri_list = []
+                for pa in pathsA:
+                    raw = self._predict_one_path(fam, "A", pa, X)  # (n,)
+                    if raw.ndim == 1:
+                        P = np.zeros((len(X), 3), dtype=float)
+                        P[:, self.planet_idx] = raw
+                        P[:, LABEL2ID[FP]]    = 1.0 - raw
+                    else:
+                        P = raw  # already (n,3)
+                    tri_list.append(P)
+                if tri_list:
+                    out[seed] = np.mean(tri_list, axis=0)
+        return out
+
     # ---------- Public: run predictions ----------
     def predict_df(
         self,
@@ -550,46 +688,62 @@ class InferenceEngine:
         X = data[self.features].copy()
         n = len(X)
 
-        # Family probs (mean over all folds+seeds)
-        fam_probs: Dict[str, Optional[np.ndarray]] = {"lgb": None, "cat": None, "xgb": None}
-        for fam in fam_probs.keys():
-            paths_A = self.families.get(fam,{}).get("A",[])
-            if not paths_A: 
-                continue
-            if self.two_stage:
-                PA_all = self._predict_family(fam, "A", X)
-                PB_all = self._predict_family(fam, "B", X)
-                probs = []
-                for pA3, pB3 in zip(PA_all, PB_all):
-                    pA = pA3[:, self.planet_idx]
-                    pB = pB3[:, LABEL2ID[CAND]]
-                    P = np.zeros((n,3))
-                    P[:, self.planet_idx]   = pA
-                    P[:, LABEL2ID[CAND]]    = (1 - pA) * pB
-                    P[:, LABEL2ID[FP]]      = (1 - pA) * (1 - pB)
-                    probs.append(P)
-                fam_probs[fam] = np.mean(probs, axis=0) if probs else None
-            else:
-                P_list = self._predict_family(fam, "A", X)
-                fam_probs[fam] = np.mean(P_list, axis=0) if P_list else None
+        # --------- Family probs (for blend) AND per-seed probs (for meta) ----------
+        fam_probs_blend: Dict[str, Optional[np.ndarray]] = {"lgb": None, "cat": None, "xgb": None}
+        per_seed: Dict[str, Dict[int, np.ndarray]] = {}
 
-        # Blend or Meta
-        enabled = [f for f in ["lgb","cat","xgb"] if fam_probs.get(f) is not None]
-        if self.meta is not None and enabled:
-            Z = np.concatenate([fam_probs[f] for f in enabled], axis=1)  # n x (3*#families)
-            probs = self.meta.predict_proba(Z)
-        else:
-            probs = np.zeros((n,3))
-            W = self.bw
-            for fam in enabled:
-                if fam == "lgb": probs += W.get("lgbm",0.0) * fam_probs[fam]
-                if fam == "cat": probs += W.get("cat",0.0)  * fam_probs[fam]
-                if fam == "xgb": probs += W.get("xgb",0.0)  * fam_probs[fam]
+        for fam in self.family_order:
+            seed_map = self._family_seed_tri_probs(fam, X)  # {seed: (n,3)}
+            if seed_map:
+                per_seed[fam] = seed_map
+                # blend = average across seeds
+                fam_probs_blend[fam] = np.mean(list(seed_map.values()), axis=0)
+
+        enabled_fams_for_blend = [f for f,v in fam_probs_blend.items() if v is not None]
+
+        # --------- Try exact 27-feature meta (3 fams × 3 seeds × 3 classes) ----------
+        can_meta = (
+            self.meta is not None
+            and all(f in per_seed and len(per_seed[f]) >= 3 for f in self.family_order)
+        )
+
+        if can_meta:
+            blocks = []
+            for fam in self.family_order:          # family-major
+                for seed in self.seed_order[:3]:   # 3 seeds in order
+                    Ptri = per_seed[fam][seed]     # (n,3) in [FP, CAND, PLANET] order
+                    blocks.append(Ptri)
+            Z = np.concatenate(blocks, axis=1)     # (n, 27)
+
+            expected = getattr(self.meta, "n_features_in_", Z.shape[1])
+            if Z.shape[1] == expected:
+                probs = self.meta.predict_proba(Z)
+            else:
+                can_meta = False
+
+        if not can_meta:
+            # Plain weighted blend across families
+            probs = np.zeros((n, 3), dtype=float)
+            W = self.bw  # e.g. {"lgbm": 1.0, "cat": 0.0, "xgb": 0.0}
+            for fam in enabled_fams_for_blend:
+                if fam == "lgb": probs += W.get("lgbm", 0.0) * fam_probs_blend[fam]
+                if fam == "cat": probs += W.get("cat",  0.0) * fam_probs_blend[fam]
+                if fam == "xgb": probs += W.get("xgb",  0.0) * fam_probs_blend[fam]
+
 
         # P(planet) + optional Platt calibration
-        p_planet = probs[:, self.planet_idx]
+        # Ensure finite probs before using them
+        probs = np.nan_to_num(probs, nan=0.0, posinf=1.0, neginf=0.0)
+
+        # P(planet) + optional Platt calibration
+        p_planet = np.nan_to_num(probs[:, self.planet_idx], nan=0.0, posinf=1.0, neginf=0.0)
+
         if self.platt is not None:
             p_planet = self.platt.predict_proba(p_planet.reshape(-1,1))[:,1]
+            
+        # Final clamp/sanitize
+        p_planet = np.clip(np.nan_to_num(p_planet, nan=0.0, posinf=1.0, neginf=0.0), 0.0, 1.0)
+
 
         # Determine threshold
         per_mission_thr = self.thr.get("per_mission", {}) if use_per_mission else {}
@@ -614,6 +768,11 @@ class InferenceEngine:
             "PredictedClass": y_name,
             "Confidence": [conf_tag(p) for p in p_planet],
         })
+        
+        # Make mission printable and remove any NaN in preds
+        preds[INTERNAL["mission"]] = preds[INTERNAL["mission"]].fillna("Unknown")
+        preds = preds.replace({np.nan: None})
+
 
         # If per-mission thresholding requested, add a binary tag computed per-row
         if per_mission_thr:
@@ -752,7 +911,20 @@ if __name__ == "__main__":
             "curves": out.get("curves"),
             "preds": out.get("preds").to_dict(orient="records") if isinstance(out.get("preds"), pd.DataFrame) else out.get("preds"),
         }
-        print(json.dumps(payload, default=lambda o: o))
+        def _json_sanitize(obj):
+            if isinstance(obj, float):
+                if not np.isfinite(obj):
+                    return None
+                return float(obj)
+            if isinstance(obj, dict):
+                return {k: _json_sanitize(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [_json_sanitize(v) for v in obj]
+            return obj
+
+        payload = _json_sanitize(payload)
+        print(json.dumps(payload, allow_nan=False))
+
     else:
         if not args.bundle_dir or not args.csv_path:
             raise SystemExit("Usage: python exo_infer.py BUNDLE_DIR CSV_PATH [--top_n N | --thr T]")
