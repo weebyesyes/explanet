@@ -43,6 +43,7 @@ from sklearn.metrics import (
 )
 from sklearn.linear_model import LogisticRegression
 
+
 # =====================
 # Shared constants (must match training)
 # =====================
@@ -77,6 +78,23 @@ INTERNAL = {
 # Candidate columns that look leaky in raw sources (we always strip them)
 LEAKY_SUBSTRINGS = ["disposition","pdisposition","tfopwg","fpflag","score","disp_","_flag"]
 
+# Validator notes (kept for UI parity; inference no longer defaults)
+MISSION_FALLBACK_NOTE = "Unrecognized/empty mission type, defaulting to TESS"
+KNOWN_MISSIONS = {"Kepler", "TESS", "K2"}
+REQUIRED = [INTERNAL["id"], INTERNAL["mission"]]
+
+NUM_HINTS = [
+    INTERNAL["period_days"], INTERNAL["duration_hours"], INTERNAL["depth_ppm"],
+    INTERNAL["planet_radius_re"], INTERNAL["stellar_teff_k"], INTERNAL["stellar_logg_cgs"],
+    INTERNAL["stellar_radius_rsun"], INTERNAL["insolation_earth"], INTERNAL["eqt_k"],
+    INTERNAL["snr_like"]
+]
+
+def _normalize(s: str) -> str:
+    import re
+    return re.sub(r"[^a-z0-9]", "", str(s).lower())
+
+
 # =====================
 # Helper: robust CSV loader (also supports simple ZIP->first CSV)
 # =====================
@@ -90,27 +108,13 @@ def load_any_csv(path_or_bytes) -> pd.DataFrame:
         return pd.read_csv(io.BytesIO(path_or_bytes), low_memory=False)
     return pd.read_csv(path_or_bytes, low_memory=False)
 
+
 # =====================
 # VALIDATOR
 # Returns (ok_for_scoring: bool, report: dict)
 # - status: "Ready" | "Needs fixes" | "Cannot score"
 # - issues: list of {severity, code, msg, ...}
 # =====================
-MISSION_FALLBACK_NOTE = "Unrecognized/empty mission type, defaulting to TESS"
-REQUIRED = [INTERNAL["id"], INTERNAL["mission"]]
-KNOWN_MISSIONS = {"Kepler","TESS","K2"}
-
-NUM_HINTS = [
-    INTERNAL["period_days"], INTERNAL["duration_hours"], INTERNAL["depth_ppm"],
-    INTERNAL["planet_radius_re"], INTERNAL["stellar_teff_k"], INTERNAL["stellar_logg_cgs"],
-    INTERNAL["stellar_radius_rsun"], INTERNAL["insolation_earth"], INTERNAL["eqt_k"],
-    INTERNAL["snr_like"]
-]
-
-def _normalize(s: str) -> str:
-    import re
-    return re.sub(r"[^a-z0-9]", "", str(s).lower())
-
 def _mission_status(raw: pd.Series) -> Tuple[pd.Series, pd.Series, pd.Series]:
     """Return (stringified, missing_mask, invalid_mask) for mission column."""
     mission_str = raw.astype(str).str.strip()
@@ -118,7 +122,7 @@ def _mission_status(raw: pd.Series) -> Tuple[pd.Series, pd.Series, pd.Series]:
     missing_mask = (
         raw.isna()
         | (mission_str == "")
-        | lower.isin({"nan", "none", "null"})
+        | lower.isin({"nan", "none", "null", "unknown"})
     )
     invalid_mask = ~(mission_str.isin(KNOWN_MISSIONS) | missing_mask)
     return mission_str, missing_mask, invalid_mask
@@ -144,7 +148,7 @@ def validate_df(df: pd.DataFrame) -> Tuple[bool, Dict[str, Any]]:
         issues.append({"severity":"error","code":"missing_required",
                        "msg": f"Missing required columns: {missing_required}"})
 
-    # 3) mission values (if present)
+    # 3) mission values (if present) — validator remains *lenient* (warns)
     if INTERNAL["mission"] in cols:
         raw_mission = df[INTERNAL["mission"]]
         mission_str, missing_mask, invalid_mask = _mission_status(raw_mission)
@@ -238,9 +242,11 @@ def validate_df(df: pd.DataFrame) -> Tuple[bool, Dict[str, Any]]:
         ]
     }
 
+
 # =====================
 # Preprocessor class (same name as training) so preprocess.pkl loads cleanly
-# (Contains the original .transform logic, trimmed comments)
+# (Contains the original .transform logic, trimmed comments; we will rely on the
+# pickled instance’s learned medians/clip/z params.)
 # =====================
 @dataclass
 class HarmonizeSpec:
@@ -248,14 +254,14 @@ class HarmonizeSpec:
     label_map: Dict[str, str]
 
 def _find_col(df, candidates):
-    if df is None or df.shape[1] == 0: 
+    if df is None or df.shape[1] == 0:
         return None
-    if isinstance(candidates, str): 
+    if isinstance(candidates, str):
         candidates = [candidates]
     normmap = {_normalize(c): c for c in df.columns}
     for cand in candidates:
         key = _normalize(cand)
-        if key in normmap: 
+        if key in normmap:
             return normmap[key]
     for c in df.columns:  # loose contains
         if any(_normalize(cand) in _normalize(c) for cand in candidates):
@@ -264,7 +270,6 @@ def _find_col(df, candidates):
 
 class ExoPreprocessor:
     RAD_EARTH_PER_SUN = 109.076
-
     def __init__(self, seed=42, k2_trandep_unit="auto", feature_switches=None):
         self.seed = seed
         self.k2_trandep_unit = k2_trandep_unit
@@ -276,7 +281,7 @@ class ExoPreprocessor:
         self.mission_meanstd_: Dict[str, Dict[str, Tuple[float,float]]] = {}
 
     def _fix_k2_depth_units(self, s: pd.Series) -> pd.Series:
-        # “auto” heuristic
+        # “auto” heuristic (matches training code path)
         med = float(np.nanmedian(s.dropna())) if s.notna().any() else np.nan
         if self.k2_trandep_unit == "ppm": return s
         if self.k2_trandep_unit == "percent": return s * 10000.0
@@ -284,13 +289,13 @@ class ExoPreprocessor:
         return s*10000.0 if med < 10 else s
 
     def _harmonize_one(self, df: pd.DataFrame, spec: HarmonizeSpec, mission: str) -> pd.DataFrame:
-        out = pd.DataFrame()
+        out = pd.DataFrame(index=df.index)
         out[INTERNAL["mission"]] = mission
         # ids
         id_col = _find_col(df, spec.src.get("id")) if spec.src.get("id") else None
-        out[INTERNAL["id"]] = (df[id_col] if id_col else df.index).astype(str)
+        out[INTERNAL["id"]] = (df[id_col] if id_col is not None else df.index).astype(str)
         star_col = _find_col(df, spec.src.get("star_id")) if spec.src.get("star_id") else None
-        out[INTERNAL["star_id"]] = (df[star_col] if star_col else out[INTERNAL["id"]]).astype(str)
+        out[INTERNAL["star_id"]] = (df[star_col] if star_col is not None else out[INTERNAL["id"]]).astype(str)
         # label
         lab_col = _find_col(df, spec.src.get("label_candidates", []))
         if lab_col:
@@ -308,16 +313,12 @@ class ExoPreprocessor:
             use_col = _find_col(df, src_name) if src_name else None
             resolved[k] = use_col
             out[INTERNAL[k]] = pd.to_numeric(df[use_col], errors="coerce") if use_col else np.nan
-            
-        # pass through error-widths if present
-        ERRW = [
-            "period_errw","duration_errw","depth_errw","prad_errw",
-            "teff_errw","logg_errw","srad_errw","insol_errw","eqt_errw"
-        ]
-        for e in ERRW:
+
+        # pass-through error-widths if present (training supports these in jitter calc)
+        for e in ["period_errw","duration_errw","depth_errw","prad_errw",
+                  "teff_errw","logg_errw","srad_errw","insol_errw","eqt_errw"]:
             c = _find_col(df, e)
             out[e] = pd.to_numeric(df[c], errors="coerce") if c else np.nan
-
 
         # K2 unit fix
         if mission == "K2" and not pd.isna(out[INTERNAL["depth_ppm"]]).all():
@@ -332,44 +333,42 @@ class ExoPreprocessor:
         return out
 
     def transform(self, parts: Dict[str, Tuple[pd.DataFrame, HarmonizeSpec]]) -> pd.DataFrame:
-        # (At inference we rely on stored self.mission_medians/clip/z from training)
+        # We rely on the pickled instance's learned medians/clip/z; here we only harmonize and
+        # recompute engineered features to align with training (no jitter at inference).
         dfs = []
         for mission, (df, spec) in parts.items():
             h = self._harmonize_one(df, spec, mission)
-            
-            # make sure all trained numeric features exist (avoid KeyError)
+
+            # ensure all trained numeric features are present
             for c in self.numeric_features_:
                 if c not in h.columns:
                     h[c] = np.nan
 
-
-            # Impute + missing flags using training medians
+            # impute + missing flags using training medians
             for c in self.numeric_features_:
                 miss = h[c].isna()
                 h[c + "__missing"] = miss.astype(np.int8)
                 med = self.mission_medians.get(mission, pd.Series(dtype=float)).get(c, np.nan)
                 if np.isnan(med):
-                    # fallback to across-mission median if needed
                     all_meds = [m.get(c, np.nan) for m in self.mission_medians.values()]
                     med = np.nanmedian(all_meds) if len(all_meds) else 0.0
                 h.loc[miss, c] = med
 
-            # Basics
+            # basic features
             pdays  = h[INTERNAL["period_days"]].clip(lower=1e-6)
             dhours = h[INTERNAL["duration_hours"]].clip(lower=1e-6)
             dppm   = h[INTERNAL["depth_ppm"]].clip(lower=1e-9)
+
             h["log_period"]     = np.log1p(pdays)
             h["log_duration_h"] = np.log1p(dhours)
             h["log_depth_ppm"]  = np.log1p(dppm)
             h["duty_cycle"]     = (dhours / (pdays * 24.0)).clip(0, 1)
             h["depth_per_hour"] = (dppm / dhours)
-            
-            # ---- physics ratios (match training) ----
-            Rp_re  = h[INTERNAL["planet_radius_re"]].clip(lower=1e-6)
-            Rs_rsun= h[INTERNAL["stellar_radius_rsun"]].clip(lower=1e-6)
-            dppm   = h[INTERNAL["depth_ppm"]].clip(lower=1e-9)
 
-            Rs_re  = Rs_rsun * self.RAD_EARTH_PER_SUN
+            # physics ratios (match training)
+            Rp_re   = h[INTERNAL["planet_radius_re"]].clip(lower=1e-6)
+            Rs_rsun = h[INTERNAL["stellar_radius_rsun"]].clip(lower=1e-6)
+            Rs_re   = Rs_rsun * self.RAD_EARTH_PER_SUN
             expected_ppm = 1e6 * (Rp_re / Rs_re)**2
             h["depth_over_radii_model"] = (dppm / expected_ppm).replace([np.inf, -np.inf], np.nan).fillna(1.0)
 
@@ -386,26 +385,24 @@ class ExoPreprocessor:
             h["log_depth_over_radii_model"] = np.log1p(h["depth_over_radii_model"].clip(lower=1e-9))
             h["log_snr_proxy"]              = np.log1p(h["snr_proxy"].clip(lower=1e-9))
 
-
             dfs.append(h)
 
         merged = pd.concat(dfs, axis=0, ignore_index=True)
-        
+
+        # star-context features
         g = merged.groupby(INTERNAL["star_id"], sort=False)
         merged["star_multiplicity"] = g[INTERNAL["id"]].transform("count")
-
         for feat, asc in [(INTERNAL["depth_ppm"], False),
-                        (INTERNAL["snr_like"], False),
-                        (INTERNAL["period_days"], True)]:
+                          (INTERNAL["snr_like"], False),
+                          (INTERNAL["period_days"], True)]:
             if feat in merged.columns:
                 merged[f"{feat}__rank_in_star"] = g[feat].rank(method="average", ascending=asc)
-
         if INTERNAL["depth_ppm"] in merged.columns:
             merged["star_depth_mean"] = g[INTERNAL["depth_ppm"]].transform("mean")
             merged["star_depth_std"]  = g[INTERNAL["depth_ppm"]].transform("std").fillna(0)
             merged["star_depth_cv"]   = (merged["star_depth_std"] / (merged["star_depth_mean"].replace(0, np.nan))).fillna(0)
 
-        # Per-mission winsorize + z, using stored params
+        # per-mission winsorize + z using stored params
         if self.fs.get("mission_standardize", False):
             missions_here = [m for m in pd.Series(merged[INTERNAL["mission"]]).dropna().unique()
                              if m in self.mission_clip_]
@@ -421,23 +418,19 @@ class ExoPreprocessor:
                     if mu is not None and sd not in (None, 0):
                         merged.loc[mask, f"{c}__z_miss"] = (merged.loc[mask, c].values - mu) / sd
 
-        # One-hot mission
+        # One-hot mission (no defaults added here)
         mission_ohe = pd.get_dummies(merged[INTERNAL["mission"]], prefix="mission", dummy_na=False)
         merged = pd.concat([merged, mission_ohe], axis=1)
-        for mcol in ["mission_Kepler","mission_TESS","mission_K2"]:
-            if mcol not in merged.columns:
-                merged[mcol] = 0
-                
-        
+        # DO NOT auto-create mission_* columns here; training features list will gate selection
         return merged
 
 # Make unpickling robust if preprocess.pkl was dumped from a notebook (__main__)
-# We register our ExoPreprocessor class under __main__ so joblib can resolve it.
 import types
 if "__main__" not in sys.modules:
     sys.modules["__main__"] = types.ModuleType("__main__")
 setattr(sys.modules["__main__"], "ExoPreprocessor", ExoPreprocessor)
 setattr(sys.modules["__main__"], "HarmonizeSpec", HarmonizeSpec)
+
 
 # =====================
 # Inference Engine
@@ -449,6 +442,7 @@ class InferenceEngine:
       - recommend_threshold (global/per-mission)
       - compute_metrics (if labels provided)
     Expects df with at least: id, mission; optional: label and numeric features.
+    STRICT: mission column must be present and ONLY contain Kepler, TESS, or K2.
     """
 
     def __init__(self, bundle_dir: str):
@@ -465,25 +459,20 @@ class InferenceEngine:
         self.two_stage = bool(self.thr.get("two_stage", False))
         self.use_meta  = bool(self.thr.get("use_meta", False))
         self.bw        = self.thr.get("blend_weights", {"lgbm": 1.0, "cat": 0.0, "xgb": 0.0})
-        self._mission_default_ids: Set[str] = set()
 
-        # Discover base models (family -> stage -> seed -> [fold paths])
+        # Discover base models: {fam: {"A": {seed:[paths]}, "B": {seed:[paths]}}}
         self.registry = {fam: {"A": {}, "B": {}} for fam in ["lgb", "cat", "xgb"]}
-
         for fname in os.listdir(bundle_dir):
             path = os.path.join(bundle_dir, fname)
             if not (os.path.isfile(path) and fname.startswith("model_")):
                 continue
-            # expected: model_<fam>_<stage>_seed<k>_fold<j>.<ext>
             m = re.search(r"^model_(lgb|cat|xgb)_(A|B)_seed(\d+)_fold(\d+)\.", fname)
-            if not m:
+            if not m:  # tolerate any extra files
                 continue
-            fam = m.group(1)
-            stage = m.group(2)
-            seed = int(m.group(3))
+            fam = m.group(1); stage = m.group(2); seed = int(m.group(3))
             self.registry[fam][stage].setdefault(seed, []).append(path)
 
-        # deterministic order used by meta
+        # deterministic order used by meta blender
         self.family_order = ["lgb", "cat", "xgb"]
         self.seed_order = sorted(
             set(s for fam in self.family_order for s in self.registry[fam]["A"].keys())
@@ -499,14 +488,52 @@ class InferenceEngine:
         self.planet_idx = self.labmap["to_id"][PLANET]
         self.class_names = [self.labmap["to_label"][str(i)] for i in range(3)]
 
-    # ---------- Harmonize incoming df into model features ----------
+    # ---------- Harmonize incoming df into model features (STRICT MISSIONS) ----------
     def _harmonize_df(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Accepts a single merged dataframe with 'mission' column in {Kepler, TESS, K2}.
-        We split by mission and feed each split through the preprocessor using
-        an identity spec (i.e., our "internal" column names).
+        Accepts a single merged dataframe with 'mission' column.
+        STRICT: require mission ∈ {Kepler, TESS, K2} for *every* row.
+        No guessing, no defaulting, no demotion. If violated → raise ValueError.
         """
-        # Identity map: tells the harmonizer to read columns with our INTERNAL names if present
+        if INTERNAL["mission"] not in df.columns:
+            raise ValueError("Missing required column 'mission'. Provide Kepler, TESS, or K2 for each row.")
+
+        # Normalize exact casing only; do not infer/guess from ID and do not default.
+        raw = df[INTERNAL["mission"]].astype(str).str.strip()
+        norm = raw.copy()
+        low  = raw.str.lower()
+
+        # Map lowercase to canonical tokens, but only if it's exactly those names
+        norm[low == "kepler"] = "Kepler"
+        norm[low == "tess"]   = "TESS"
+        norm[low == "k2"]     = "K2"
+
+        # Validate: missing-like?
+        missing_like = (
+            df[INTERNAL["mission"]].isna()
+            | (norm == "")
+            | low.isin({"nan","none","null","unknown"})
+        )
+        if missing_like.any():
+            bad_rows = missing_like[missing_like].index[:10].tolist()
+            raise ValueError(
+                f"'mission' has empty/unknown values in {int(missing_like.sum())} rows "
+                f"(e.g., indices {bad_rows}). No defaults will be applied."
+            )
+
+        # Validate: unrecognized tokens?
+        bad = ~norm.isin(KNOWN_MISSIONS)
+        if bad.any():
+            bad_vals = norm[bad].value_counts().index.tolist()[:5]
+            raise ValueError(
+                "Unrecognized mission values detected. Allowed: Kepler, TESS, K2. "
+                f"Examples of bad values: {bad_vals}"
+            )
+
+        # Now split by normalized mission strictly
+        df2 = df.copy()
+        df2[INTERNAL["mission"]] = norm
+
         SELF_SRC = {
             "id": INTERNAL["id"], "star_id": INTERNAL.get("star_id", INTERNAL["id"]),
             "label_candidates": [INTERNAL["label"]],
@@ -519,141 +546,45 @@ class InferenceEngine:
             "snr_like": INTERNAL["snr_like"],
         }
 
-        # ---- Normalize/guess mission BEFORE splitting (REPLACE PREVIOUS BLOCK) ----
-        self._mission_default_ids = set()
         parts = {}
-        if INTERNAL["mission"] in df.columns:
-            df = df.copy()
-            raw = df[INTERNAL["mission"]].astype(str).str.strip()
-
-            # strict normalize to exactly: Kepler / TESS / K2
-            norm = raw.copy()
-            low  = raw.str.lower()
-
-            norm[low == "kepler"] = "Kepler"
-            norm[low == "tess"]   = "TESS"
-            norm[low == "k2"]     = "K2"
-            
-            missing_like = low.isin({"", "nan", "none", "unknown"})
-            if missing_like.any():
-                fallback_ids = df.loc[missing_like, INTERNAL["id"]].astype(str).tolist()
-                self._mission_default_ids.update(fallback_ids)
-                norm.loc[missing_like] = "TESS"
-
-            # guess from id when still not recognized
-            def _guess_from_id(x):
-                s = str(x).upper()
-                if s.startswith("EPIC") or "K2-" in s: return "K2"
-                if "TOI" in s or "TIC" in s:          return "TESS"
-                # common Kepler styles: KOI #######, pure 7–9 digit IDs
-                if s.startswith("KOI") or (s.isdigit() and 7 <= len(s) <= 9):
-                    return "Kepler"
-                return "TESS"  # safe default
-
-            bad = ~norm.isin(KNOWN_MISSIONS)
-            if bad.any():
-                norm.loc[bad] = df.loc[bad, INTERNAL["id"]].map(_guess_from_id)
-                
-            still_bad = ~norm.isin(KNOWN_MISSIONS)
-            if still_bad.any():
-                fallback_ids = df.loc[still_bad, INTERNAL["id"]].astype(str).tolist()
-                self._mission_default_ids.update(fallback_ids)
-                norm.loc[still_bad] = "TESS"
-
-            df[INTERNAL["mission"]] = norm
-
-            # now split by normalized mission (no Unknown bucket)
-            for mission in KNOWN_MISSIONS:
-                mask = norm == mission
-                sub = df[mask]
-                if len(sub):
-                    parts[mission] = (sub.copy(), HarmonizeSpec(src=SELF_SRC, label_map={
+        for mission in KNOWN_MISSIONS:
+            mask = (df2[INTERNAL["mission"]] == mission)
+            sub = df2[mask]
+            if len(sub):
+                parts[mission] = (sub.copy(), HarmonizeSpec(
+                    src=SELF_SRC,
+                    label_map={
                         PLANET: PLANET, CAND: CAND, FP: FP,
                         PLANET.upper(): PLANET, CAND.upper(): CAND, FP.upper(): FP
-                    }))
-        else:
-            # fallback: assume TESS if mission column absent
-            parts = {"TESS": (df.copy(), HarmonizeSpec(src=SELF_SRC, label_map={}))}
-            if INTERNAL["id"] in df.columns:
-                self._mission_default_ids.update(df[INTERNAL["id"]].astype(str).tolist())
+                    }
+                ))
 
-        # if nothing matched (extreme edge case), default to TESS
         if not parts:
-            parts = {"TESS": (df.copy(), HarmonizeSpec(src=SELF_SRC, label_map={}))}
-            if INTERNAL["id"] in df.columns:
-                self._mission_default_ids.update(df[INTERNAL["id"]].astype(str).tolist())
-
+            # Should never happen given checks above, but keep an explicit guard.
+            raise ValueError("Zero rows after mission filtering. Ensure 'mission' is Kepler, TESS, or K2.")
 
         data = self.pre.transform(parts)
-        # Keep canonical missions; do NOT demote to NaN (we normalized before splitting)
-        # keep canonical missions; we already normalized before splitting
+
+        # Absolutely no defaulting or demotion to NaN/other after transform.
+        # Keep canonical mission tokens as produced above.
         if INTERNAL["mission"] in data.columns:
             s = data[INTERNAL["mission"]].astype(str).str.strip()
+            # Tighten casing once more; anything not canonical triggers error
             s = s.replace({"kepler":"Kepler", "tess":"TESS", "k2":"K2"})
-            low = s.str.lower()
-            missing_like = low.isin({"nan","none","","unknown"})
-            if missing_like.any():
-                if INTERNAL["id"] in data.columns:
-                    self._mission_default_ids.update(data.loc[missing_like, INTERNAL["id"]].astype(str).tolist())
-                s.loc[missing_like] = "TESS"
+            if (~s.isin(KNOWN_MISSIONS)).any():
+                bad_vals = s[~s.isin(KNOWN_MISSIONS)].value_counts().index.tolist()[:5]
+                raise ValueError(f"Post-transform, mission contained invalid values: {bad_vals}")
             data[INTERNAL["mission"]] = s
         else:
-            # No mission column made it through preprocessing; fabricate a TESS default.
-            mission_stub = pd.Series("TESS", index=data.index)
-            if INTERNAL["id"] in data.columns:
-                self._mission_default_ids.update(data[INTERNAL["id"]].astype(str).tolist())
-            data[INTERNAL["mission"]] = mission_stub
+            raise ValueError("Preprocessor output lost the 'mission' column; cannot proceed.")
 
-
-        # Drop any leaky columns in case user sent them; training already removed them
+        # Drop leaky cols (training removed them; ensure same here)
         leaky = [c for c in data.columns if any(s in c.lower() for s in LEAKY_SUBSTRINGS)]
         keep = [c for c in data.columns if (c not in leaky) or (c == INTERNAL["label"])]
         return data[keep]
 
     # ---------- Family prediction helpers ----------
-    def _predict_family(self, fam: str, stage: str, X: pd.DataFrame) -> List[np.ndarray]:
-        outs = []
-        entries = sorted([p for p in self.families.get(fam, {}).get(stage, [])])
-        for p in entries:
-            if fam == "lgb":
-                booster = lgb.Booster(model_file=p)
-                P = booster.predict(X, num_iteration=booster.best_iteration)
-                if self.two_stage:
-                    if stage == "A":
-                        proba = np.vstack([np.zeros(len(X)), np.zeros(len(X)), P]).T
-                    else:
-                        proba = np.vstack([np.zeros(len(X)), P, np.zeros(len(X))]).T
-                else:
-                    proba = P
-            elif fam == "cat" and CATBOOST_AVAILABLE:
-                clf = CatBoostClassifier()
-                clf.load_model(p)
-                P = np.array(clf.predict_proba(X))
-                if self.two_stage:
-                    if stage == "A":
-                        proba = np.vstack([np.zeros(len(X)), np.zeros(len(X)), P[:,1]]).T
-                    else:
-                        proba = np.vstack([np.zeros(len(X)), P[:,1], np.zeros(len(X))]).T
-                else:
-                    proba = P
-            elif fam == "xgb" and XGB_AVAILABLE:
-                dm = xgb.DMatrix(X)
-                bst = xgb.Booster(model_file=p)
-                P = bst.predict(dm)
-                if self.two_stage:
-                    if stage == "A":
-                        proba = np.vstack([np.zeros(len(X)), np.zeros(len(X)), P]).T
-                    else:
-                        proba = np.vstack([np.zeros(len(X)), P, np.zeros(len(X))]).T
-                else:
-                    proba = P
-            else:
-                continue  # skip unavailable family
-            outs.append(proba)
-        return outs
-
     def _predict_one_path(self, fam: str, stage: str, path: str, X: pd.DataFrame) -> np.ndarray:
-        """Return binary probability (n,) for the given model path."""
         n = len(X)
         if fam == "lgb":
             booster = lgb.Booster(model_file=path)
@@ -673,14 +604,6 @@ class InferenceEngine:
             return np.full(n, np.nan, dtype=float)
 
     def _family_seed_tri_probs(self, fam: str, X: pd.DataFrame) -> dict[int, np.ndarray]:
-        """
-        For one family, return {seed: tri_probs(n,3)} averaged over folds.
-        Two-stage: combine A(planet) & B(candidate) into 3-way probs:
-        Pplanet = pA
-        Pcand   = (1-pA)*pB
-        Pfp     = (1-pA)*(1-pB)
-        One-stage: if a family emitted tri-prob directly, use it; else map binary to tri.
-        """
         if fam == "cat" and not CATBOOST_AVAILABLE:
             return {}
         if fam == "xgb" and not XGB_AVAILABLE:
@@ -700,13 +623,12 @@ class InferenceEngine:
                     pA = self._predict_one_path(fam, "A", pa, X)  # (n,)
                     pB = self._predict_one_path(fam, "B", pb, X)  # (n,)
                     P = np.zeros((len(X), 3), dtype=float)
-                    P[:, self.planet_idx]        = pA
-                    P[:, LABEL2ID[CAND]]         = (1.0 - pA) * pB
-                    P[:, LABEL2ID[FP]]           = (1.0 - pA) * (1.0 - pB)
+                    P[:, self.planet_idx] = pA
+                    P[:, LABEL2ID[CAND]]  = (1.0 - pA) * pB
+                    P[:, LABEL2ID[FP]]    = (1.0 - pA) * (1.0 - pB)
                     tri_list.append(P)
                 out[seed] = np.mean(tri_list, axis=0)
             else:
-                # one-stage: if models emit tri-prob we would use it; in this project they’re binary → map to tri
                 tri_list = []
                 for pa in pathsA:
                     raw = self._predict_one_path(fam, "A", pa, X)  # (n,)
@@ -731,107 +653,86 @@ class InferenceEngine:
     ) -> Dict[str, Any]:
         """
         Returns dict with:
-          - preds: DataFrame [id, mission, P(planet), PredictedClass, Confidence]
+          - preds: DataFrame [id, mission, P(planet), PredictedClass, Confidence, Planet>=Thr]
           - threshold_used, per_mission_thresholds
           - metrics (if labels exist), curves (if labels exist)
+        STRICT: raises ValueError if 'mission' is missing/invalid.
         """
-        # Validate upstream (UI should gate; we re-check quickly)
+        # Validator remains lenient for UI, but inference will enforce strict missions.
         ok, vrep = validate_df(df_in)
         if not ok and vrep["status"] == "Cannot score":
             return {"error": "Cannot score", "validator": vrep}
 
-        # Harmonize → model matrix
+        # Strip leaky columns (safety)
         df = df_in.copy()
-        # Strip leaky columns (safe-guard)
         leak_cols = [c for c in df.columns if any(s in c.lower() for s in LEAKY_SUBSTRINGS)]
         df = df.drop(columns=leak_cols, errors="ignore")
+
+        # Harmonize → model matrix (STRICT mission checks happen inside)
         data = self._harmonize_df(df)
         X = data[self.features].copy()
         n = len(X)
 
-        # --------- Family probs (for blend) AND per-seed probs (for meta) ----------
+        # Family probs (for blend) and per-seed probs (for meta)
         fam_probs_blend: Dict[str, Optional[np.ndarray]] = {"lgb": None, "cat": None, "xgb": None}
         per_seed: Dict[str, Dict[int, np.ndarray]] = {}
-
         for fam in self.family_order:
             seed_map = self._family_seed_tri_probs(fam, X)  # {seed: (n,3)}
             if seed_map:
                 per_seed[fam] = seed_map
-                # blend = average across seeds
                 fam_probs_blend[fam] = np.mean(list(seed_map.values()), axis=0)
 
         enabled_fams_for_blend = [f for f,v in fam_probs_blend.items() if v is not None]
+        if not enabled_fams_for_blend:
+            raise RuntimeError("No base models available to score (missing model files or unsupported families).")
 
-        # --------- Try exact 27-feature meta (3 fams × 3 seeds × 3 classes) ----------
+        # Meta (expecting specific concatenation shape), else weighted blend
+        probs = None
         can_meta = (
             self.meta is not None
             and all(f in per_seed and len(per_seed[f]) >= 3 for f in self.family_order)
         )
-
         if can_meta:
             blocks = []
-            for fam in self.family_order:          # family-major
-                for seed in self.seed_order[:3]:   # 3 seeds in order
-                    Ptri = per_seed[fam][seed]     # (n,3) in [FP, CAND, PLANET] order
+            for fam in self.family_order:
+                for seed in self.seed_order[:3]:
+                    Ptri = per_seed[fam][seed]
                     blocks.append(Ptri)
-            Z = np.concatenate(blocks, axis=1)     # (n, 27)
-
+            Z = np.concatenate(blocks, axis=1)  # (n, 27) if 3 fams × 3 seeds × 3 classes
             expected = getattr(self.meta, "n_features_in_", Z.shape[1])
             if Z.shape[1] == expected:
                 probs = self.meta.predict_proba(Z)
-            else:
-                can_meta = False
 
-        if not can_meta:
-            # Plain weighted blend across families
+        if probs is None:
             probs = np.zeros((n, 3), dtype=float)
-            W = self.bw  # e.g. {"lgbm": 1.0, "cat": 0.0, "xgb": 0.0}
+            W = self.bw  # e.g., {"lgbm":0.5,"cat":0.5,"xgb":0.0}
             for fam in enabled_fams_for_blend:
                 if fam == "lgb": probs += W.get("lgbm", 0.0) * fam_probs_blend[fam]
                 if fam == "cat": probs += W.get("cat",  0.0) * fam_probs_blend[fam]
                 if fam == "xgb": probs += W.get("xgb",  0.0) * fam_probs_blend[fam]
 
-
         # P(planet) + optional Platt calibration
-        # Ensure finite probs before using them
         probs = np.nan_to_num(probs, nan=0.0, posinf=1.0, neginf=0.0)
-
-        # P(planet) + optional Platt calibration
         p_planet = np.nan_to_num(probs[:, self.planet_idx], nan=0.0, posinf=1.0, neginf=0.0)
-
         if self.platt is not None:
             p_planet = self.platt.predict_proba(p_planet.reshape(-1,1))[:,1]
-            
-        # Final clamp/sanitize
         p_planet = np.clip(np.nan_to_num(p_planet, nan=0.0, posinf=1.0, neginf=0.0), 0.0, 1.0)
 
-
-        # Determine threshold
+        # Threshold selection
         per_mission_thr = self.thr.get("per_mission", {}) if use_per_mission else {}
-        thr_used: float
         if top_n is not None and top_n >= 1:
-            # pick threshold to roughly yield N positives globally
             thr_used = _threshold_for_topn(p_planet, top_n)
         elif threshold is not None:
             thr_used = float(threshold)
         else:
             thr_used = float(self.thr.get("planet_recommended", 0.5))
 
-        # Class predictions for table
+        # Final table
         y_idx = np.argmax(probs, axis=1)
         y_name = [self.class_names[i] for i in y_idx]
         def conf_tag(p): return "High" if p>=0.8 else ("Medium" if p>=0.6 else "Low")
-        
-        missions = data[INTERNAL["mission"]].astype(str) if INTERNAL["mission"] in data else pd.Series("TESS", index=data.index)
-        missions = missions.str.strip()
-        missions = missions.replace({"kepler": "Kepler", "tess": "TESS", "k2": "K2"})
-        lower = missions.str.lower()
-        missing_like = lower.isin({"nan", "none", "", "unknown"})
-        if missing_like.any():
-            missing_ids = data.loc[missing_like, INTERNAL["id"]].astype(str).tolist()
-            self._mission_default_ids.update(missing_ids)
-            missions.loc[missing_like] = "TESS"
 
+        missions = data[INTERNAL["mission"]].astype(str)
         preds = pd.DataFrame({
             INTERNAL["id"]: data[INTERNAL["id"]].values,
             INTERNAL["mission"]: missions.values,
@@ -839,32 +740,12 @@ class InferenceEngine:
             "PredictedClass": y_name,
             "Confidence": [conf_tag(p) for p in p_planet],
         })
-        
-        # ADD after creating preds DataFrame
-        preds["IsPlanet"] = (preds["P(planet)"] >= thr_used).astype(int)
-        preds["BinaryClass"] = np.where(preds["IsPlanet"] == 1, "Planet", "Not Planet")
-        preds["BinaryConfidence"] = np.where(preds["IsPlanet"] == 1,
-                                            preds["P(planet)"],
-                                            1.0 - preds["P(planet)"])
 
-        
-        # Make mission printable and remove any NaN in preds
-        preds[INTERNAL["mission"]] = preds[INTERNAL["mission"]].fillna("TESS")
-        if self._mission_default_ids:
-            note_col = preds[INTERNAL["id"]].astype(str).map(
-                lambda x: MISSION_FALLBACK_NOTE if x in self._mission_default_ids else None
-            )
-            if note_col.notna().any():
-                preds["MissionNote"] = note_col
-        preds = preds.replace({np.nan: None})
-
-        # If per-mission thresholding requested, add a binary tag computed per-row
         if per_mission_thr:
-            pos_mask = []
-            for m, p in zip(preds[INTERNAL["mission"]].values, preds["P(planet)"].values):
-                t = per_mission_thr.get(m, thr_used)
-                pos_mask.append(int(p >= t))
-            preds["Planet>=Thr"] = pos_mask
+            preds["Planet>=Thr"] = [
+                int(p >= per_mission_thr.get(m, thr_used))
+                for m, p in zip(preds[INTERNAL["mission"]].values, preds["P(planet)"].values)
+            ]
         else:
             preds["Planet>=Thr"] = (preds["P(planet)"].values >= thr_used).astype(int)
 
@@ -886,17 +767,18 @@ class InferenceEngine:
             "curves": curves
         }
 
+
 # =====================
 # Metrics, curves, helpers
 # =====================
 def _threshold_for_topn(p: np.ndarray, n_pos: int) -> float:
     """ Pick a threshold so that ~n_pos items are >= thr (ties break arbitrarily). """
     n = len(p)
-    if n_pos <= 0: 
+    if n_pos <= 0:
         return 1.0
     if n_pos >= n:
         return 0.0
-    kth = np.partition(p, -n_pos)[-n_pos]  # value so that at least n_pos are >= kth
+    kth = np.partition(p, -n_pos)[-n_pos]
     return float(kth)
 
 def _compute_metrics(y_true_bin, y_true_tri, probs3, p_planet, thr):
@@ -948,17 +830,20 @@ def _calibration_curve(y_true, y_prob, n_bins=10):
             out.append({"bin": i, "p_mean": pmean, "empirical": emp, "count": int(mask.sum())})
     return out
 
+
 # =====================
 # Convenience: quick file->predict wrapper
 # =====================
 def predict_file(path_or_bytes, engine: InferenceEngine, **kwargs) -> Dict[str, Any]:
     df = load_any_csv(path_or_bytes)
     ok, report = validate_df(df)
-    if not ok and report["status"] == "Cannot score":
-        return {"error": "Cannot score", "validator": report}
-    out = engine.predict_df(df, **kwargs)
-    out["validator"] = report
-    return out
+    try:
+        out = engine.predict_df(df, **kwargs)
+        out["validator"] = report
+        return out
+    except Exception as e:
+        return {"error": str(e), "validator": report}
+
 
 # =====================
 # Example (you can delete this block in production)
@@ -974,7 +859,11 @@ if __name__ == "__main__":
     ap.add_argument("--thr", type=float, default=None)
     ap.add_argument("--mode", choices=["validate", "predict"], default=None,
                     help="Optional CLI helper for the web app")
+    ap.add_argument("--per_mission", action="store_true", default=True,
+                    help="Use per-mission thresholds from thresholds.json")
+
     args = ap.parse_args()
+
 
     if args.mode == "validate":
         if not args.csv_path:
@@ -987,28 +876,30 @@ if __name__ == "__main__":
             raise SystemExit("--mode predict requires bundle_dir and csv_path")
         eng = InferenceEngine(args.bundle_dir)
         df = load_any_csv(args.csv_path)
-        out = eng.predict_df(df, threshold=args.thr, top_n=args.top_n)
-        payload = {
-            "threshold_used": out.get("threshold_used"),
-            "per_mission_thresholds": out.get("per_mission_thresholds"),
-            "metrics": out.get("metrics"),
-            "curves": out.get("curves"),
-            "preds": out.get("preds").to_dict(orient="records") if isinstance(out.get("preds"), pd.DataFrame) else out.get("preds"),
-        }
-        def _json_sanitize(obj):
-            if isinstance(obj, float):
-                if not np.isfinite(obj):
-                    return None
-                return float(obj)
-            if isinstance(obj, dict):
-                return {k: _json_sanitize(v) for k, v in obj.items()}
-            if isinstance(obj, list):
-                return [_json_sanitize(v) for v in obj]
-            return obj
+        try:
+            out = eng.predict_df(df, threshold=args.thr, top_n=args.top_n, use_per_mission=args.per_mission)
+            payload = {
+                "threshold_used": out.get("threshold_used"),
+                "per_mission_thresholds": out.get("per_mission_thresholds"),
+                "metrics": out.get("metrics"),
+                "curves": out.get("curves"),
+                "preds": out.get("preds").to_dict(orient="records") if isinstance(out.get("preds"), pd.DataFrame) else out.get("preds"),
+            }
+            def _json_sanitize(obj):
+                if isinstance(obj, float):
+                    if not np.isfinite(obj):
+                        return None
+                    return float(obj)
+                if isinstance(obj, dict):
+                    return {k: _json_sanitize(v) for k, v in obj.items()}
+                if isinstance(obj, list):
+                    return [_json_sanitize(v) for v in obj]
+                return obj
 
-        payload = _json_sanitize(payload)
-        print(json.dumps(payload, allow_nan=False))
-
+            payload = _json_sanitize(payload)
+            print(json.dumps(payload, allow_nan=False))
+        except Exception as e:
+            print(json.dumps({"error": str(e)}))
     else:
         if not args.bundle_dir or not args.csv_path:
             raise SystemExit("Usage: python exo_infer.py BUNDLE_DIR CSV_PATH [--top_n N | --thr T]")
@@ -1016,8 +907,11 @@ if __name__ == "__main__":
         df = load_any_csv(args.csv_path)
         ok, rep = validate_df(df)
         print("Validator:", rep["status"], "| rows:", rep["row_count"])
-        out = eng.predict_df(df, threshold=args.thr, top_n=args.top_n)
-        print("Used threshold:", out["threshold_used"])
-        print(out["preds"].head().to_string(index=False))
-        if out["metrics"]:
-            print("Metrics:", json.dumps(out["metrics"], indent=2))
+        try:
+            out = eng.predict_df(df, threshold=args.thr, top_n=args.top_n, use_per_mission=args.per_mission)
+            print("Used threshold:", out["threshold_used"])
+            print(out["preds"].head().to_string(index=False))
+            if out["metrics"]:
+                print("Metrics:", json.dumps(out["metrics"], indent=2))
+        except Exception as e:
+            print("ERROR:", str(e))
