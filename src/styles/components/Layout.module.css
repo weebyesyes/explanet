@@ -49,13 +49,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  border-image: linear-gradient(0deg, #272a4f, #df6ac9) 1;
+  border-right: 0 solid rgb(39, 42, 79);
   z-index: 9999;
 }
 
 .sidebarOpened {
   width: 220px;
-  border-right: 3px solid;
+  border-right: 3px solid rgb(39, 42, 79);
   transition: width 0.3s ease, border-right 0.3s ease;
 }
 
@@ -96,15 +96,16 @@
 .sidebarOpenButtonSquare {
   width: 20px;
   height: 34px;
-  background-color: #df6ac9
+  background-color: rgb(39, 42, 79);
 }
 
 .sidebarOpenButtonTriangle {
   width: 0px;
   height: 0px;
-  border-left: solid 8px #df6ac9;
+  border-left: solid 8px rgb(39, 42, 79);
   border-top: solid 17px transparent;
   border-bottom: solid 17px transparent;
+  border-right: 0;
 }
 
 .sidebarContent {
