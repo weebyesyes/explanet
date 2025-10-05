@@ -1,0 +1,156 @@
+{
+  "python": "3.11.13 (main, Jun  4 2025, 08:57:29) [GCC 11.4.0]",
+  "lightgbm": "4.5.0",
+  "catboost": "1.2.8",
+  "xgboost": "2.0.3",
+  "numpy": "1.26.4",
+  "pandas": "2.2.3",
+  "scikit_learn": "1.2.2",
+  "joblib": "1.5.1",
+  "config": {
+    "paths": {
+      "koi_csv": "/kaggle/input/exoplanets/cumulative.csv",
+      "toi_csv": "/kaggle/input/exoplanets/toi.csv",
+      "k2_csv": "/kaggle/input/exoplanets/k2_planets_candidates.csv"
+    },
+    "row_limits": {
+      "koi": null,
+      "toi": null,
+      "k2": null
+    },
+    "seed": 42,
+    "feature_switches": {
+      "mission_standardize": true,
+      "star_context": true,
+      "physics_ratios": true,
+      "two_stage_head": true,
+      "error_jitter_aug": true,
+      "error_jitter_factor": 2,
+      "error_jitter_clip_sigma": 3.0
+    },
+    "models": {
+      "use_lightgbm": true,
+      "use_catboost": true,
+      "use_xgboost": true,
+      "n_seeds": 3,
+      "blend_weights": {
+        "lgbm": 0.5,
+        "cat": 0.5,
+        "xgb": 0.0
+      }
+    },
+    "stacking": {
+      "use_meta_learner": true,
+      "C": 2.0,
+      "max_iter": 200
+    },
+    "n_folds": 5,
+    "stage1_pr_auc_early_stop": true,
+    "lgbm_params_mc": {
+      "objective": "multiclass",
+      "num_class": 3,
+      "metric": "multi_logloss",
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "feature_fraction": 0.9,
+      "bagging_fraction": 0.8,
+      "bagging_freq": 1,
+      "min_data_in_leaf": 50,
+      "lambda_l1": 0.0,
+      "lambda_l2": 0.0,
+      "max_depth": -1,
+      "verbosity": -1,
+      "feature_pre_filter": false
+    },
+    "lgbm_params_bin": {
+      "objective": "binary",
+      "metric": "binary_logloss",
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "feature_fraction": 0.9,
+      "bagging_fraction": 0.8,
+      "bagging_freq": 1,
+      "min_data_in_leaf": 50,
+      "lambda_l1": 0.0,
+      "lambda_l2": 0.0,
+      "max_depth": -1,
+      "verbosity": -1,
+      "feature_pre_filter": false
+    },
+    "lgbm_fit": {
+      "n_estimators": 1500,
+      "early_stopping_rounds": 200,
+      "verbose_eval": 200
+    },
+    "cat_params_mc": {
+      "loss_function": "MultiClass",
+      "eval_metric": "MultiClass",
+      "learning_rate": 0.05,
+      "depth": 8,
+      "l2_leaf_reg": 3.0,
+      "random_seed": 2025,
+      "od_type": "Iter",
+      "od_wait": 200,
+      "bootstrap_type": "Bayesian",
+      "bagging_temperature": 0.5,
+      "allow_writing_files": false,
+      "iterations": 1500
+    },
+    "cat_params_bin": {
+      "loss_function": "Logloss",
+      "eval_metric": "AUC",
+      "learning_rate": 0.05,
+      "depth": 8,
+      "l2_leaf_reg": 3.0,
+      "random_seed": 2025,
+      "od_type": "Iter",
+      "od_wait": 200,
+      "bootstrap_type": "Bayesian",
+      "bagging_temperature": 0.5,
+      "allow_writing_files": false,
+      "iterations": 1500
+    },
+    "xgb_params_mc": {
+      "objective": "multi:softprob",
+      "num_class": 3,
+      "eval_metric": "mlogloss",
+      "learning_rate": 0.05,
+      "max_depth": 8,
+      "subsample": 0.8,
+      "colsample_bytree": 0.8,
+      "min_child_weight": 4,
+      "reg_alpha": 0.0,
+      "reg_lambda": 1.0,
+      "verbosity": 0
+    },
+    "xgb_params_bin": {
+      "objective": "binary:logistic",
+      "eval_metric": "logloss",
+      "learning_rate": 0.05,
+      "max_depth": 8,
+      "subsample": 0.8,
+      "colsample_bytree": 0.8,
+      "min_child_weight": 4,
+      "reg_alpha": 0.0,
+      "reg_lambda": 1.0,
+      "verbosity": 0
+    },
+    "xgb_fit": {
+      "n_estimators": 1500,
+      "early_stopping_rounds": 200
+    },
+    "class_weights": null,
+    "calibration": {
+      "platt_binary": false,
+      "temp_scaling": false,
+      "temp_init": 1.0
+    },
+    "threshold_selection": {
+      "mode": "max_f1",
+      "target_recall": 0.9
+    },
+    "per_mission_thresholds": true,
+    "k2_trandep_unit": "auto",
+    "export_dir": "/kaggle/working/exo_bundle_v4"
+  }
+}

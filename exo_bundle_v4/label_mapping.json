@@ -1,0 +1,17 @@
+{
+  "order": [
+    "False Positive",
+    "Candidate",
+    "Planet"
+  ],
+  "to_id": {
+    "False Positive": 0,
+    "Candidate": 1,
+    "Planet": 2
+  },
+  "to_label": {
+    "0": "False Positive",
+    "1": "Candidate",
+    "2": "Planet"
+  }
+}
