@@ -51,7 +51,7 @@ async function runPythonValidate(csvPath: string): Promise<PythonResult> {
 
   return new Promise((resolve, reject) => {
     const py = process.env.PYTHON_BIN || (process.platform === "win32" ? "python" : "python3");
-    const proc = spawn(py, [scriptPath, "--mode", "validate", csvPath]);
+    const proc = spawn(py, [scriptPath, "--mode", "validate", "", csvPath]);
 
     let stdout = "";
     let stderr = "";

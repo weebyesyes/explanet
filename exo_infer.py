@@ -109,6 +109,18 @@ def _normalize(s: str) -> str:
     import re
     return re.sub(r"[^a-z0-9]", "", str(s).lower())
 
+def _mission_status(raw: pd.Series) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    """Return (stringified, missing_mask, invalid_mask) for mission column."""
+    mission_str = raw.astype(str).str.strip()
+    lower = mission_str.str.lower()
+    missing_mask = (
+        raw.isna()
+        | (mission_str == "")
+        | lower.isin({"nan", "none", "null"})
+    )
+    invalid_mask = ~(mission_str.isin(KNOWN_MISSIONS) | missing_mask)
+    return mission_str, missing_mask, invalid_mask
+
 def validate_df(df: pd.DataFrame) -> Tuple[bool, Dict[str, Any]]:
     issues = []
     # 0) trivial
@@ -132,12 +144,30 @@ def validate_df(df: pd.DataFrame) -> Tuple[bool, Dict[str, Any]]:
 
     # 3) mission values (if present)
     if INTERNAL["mission"] in cols:
-        bad = ~df[INTERNAL["mission"]].astype(str).isin(KNOWN_MISSIONS)
-        if bad.any():
-            sample = df.loc[bad, INTERNAL["mission"]].astype(str).value_counts().index.tolist()[:5]
-            issues.append({"severity":"error","code":"bad_mission",
-                           "msg": f"Invalid mission values present. Examples: {sample}. "
-                                  f"Allowed: {sorted(KNOWN_MISSIONS)}"})
+        raw_mission = df[INTERNAL["mission"]]
+        mission_str, missing_mask, invalid_mask = _mission_status(raw_mission)
+        if invalid_mask.any():
+            sample = mission_str[invalid_mask].value_counts().index.tolist()[:5]
+            issues.append({
+                "severity": "warn",
+                "code": "mission_unrecognized",
+                "msg": (
+                    "Mission values found that are not part of the three missions we were "
+                    f"trained on ({sorted(KNOWN_MISSIONS)}). Treating them as blank. "
+                    f"Examples: {sample}."
+                )
+            })
+        missing_like = missing_mask | invalid_mask
+        if missing_like.any():
+            missing_count = int(missing_like.sum())
+            issues.append({
+                "severity": "warn",
+                "code": "mission_missing",
+                "msg": (
+                    "Mission is empty or unknown for "
+                    f"{missing_count} rows. We'll treat them as unknown, which may impact predictions."
+                )
+            })
 
     # 4) duplicates in id
     if INTERNAL["id"] in cols:
@@ -419,10 +449,22 @@ class InferenceEngine:
         }
 
         parts = {}
-        for mission in KNOWN_MISSIONS:
-            sub = df[df[INTERNAL["mission"]].astype(str) == mission]
-            if len(sub):
-                parts[mission] = (sub.copy(), HarmonizeSpec(src=SELF_SRC, label_map={
+        mission_series = df[INTERNAL["mission"]] if INTERNAL["mission"] in df.columns else pd.Series(dtype=object)
+        if INTERNAL["mission"] in df.columns:
+            mission_str, missing_mask, invalid_mask = _mission_status(mission_series)
+            known_mask = mission_str.isin(KNOWN_MISSIONS)
+            for mission in KNOWN_MISSIONS:
+                mask = mission_str == mission
+                sub = df[mask]
+                if len(sub):
+                    parts[mission] = (sub.copy(), HarmonizeSpec(src=SELF_SRC, label_map={
+                        PLANET: PLANET, CAND: CAND, FP: FP,
+                        PLANET.upper(): PLANET, CAND.upper(): CAND, FP.upper(): FP
+                    }))
+            unknown_mask = ~(known_mask)
+            if unknown_mask.any():
+                unknown = df[unknown_mask].copy()
+                parts["Unknown"] = (unknown, HarmonizeSpec(src=SELF_SRC, label_map={
                     PLANET: PLANET, CAND: CAND, FP: FP,
                     PLANET.upper(): PLANET, CAND.upper(): CAND, FP.upper(): FP
                 }))
@@ -431,6 +473,8 @@ class InferenceEngine:
             # (Not critical for app flow; you can remove this if your UI always enforces the template)
             parts = {"Kepler": (df.copy(), HarmonizeSpec(src=SELF_SRC, label_map={}))}
         data = self.pre.transform(parts)
+        if INTERNAL["mission"] in data.columns:
+            data.loc[~data[INTERNAL["mission"]].isin(KNOWN_MISSIONS), INTERNAL["mission"]] = np.nan
         # Drop any leaky columns in case user sent them; training already removed them
         leaky = [c for c in data.columns if any(s in c.lower() for s in LEAKY_SUBSTRINGS)]
         keep = [c for c in data.columns if (c not in leaky) or (c == INTERNAL["label"])]
