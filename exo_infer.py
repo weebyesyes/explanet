@@ -1384,11 +1384,12 @@ def build_visualization_payload(
     missions_series = scoring[INTERNAL["mission"]].astype(str)
 
     mission_mix = (
-        missions_series.value_counts().reindex(MISSIONS, fill_value=0).reset_index().rename(columns={"index": "mission", INTERNAL["mission"]: "count"})
+    missions_series.value_counts()
+    .reindex(MISSIONS, fill_value=0)
+    .rename_axis("mission")
+    .reset_index(name="count")
     )
-    mission_mix_payload = [
-        {"mission": row["mission"], "count": int(row["count"])} for _, row in mission_mix.iterrows()
-    ]
+    mission_mix_payload = mission_mix.to_dict("records")
 
     missing_cols = [c for c in scoring.columns if c.endswith("__missing")]
     missing_payload = []

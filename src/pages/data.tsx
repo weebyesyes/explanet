@@ -57,7 +57,14 @@ export default function DataValidatePage() {
   }
 
   return (
-    <div style={{ maxWidth: 960, margin: "0 auto", padding: "2rem" }}>
+    <div
+      style={{
+        maxWidth: 960,
+        margin: "0 auto",
+        padding: "2rem",
+        color: "#ffffff",
+      }}
+    >
       <h1>Validate Observation Data</h1>
       <p style={{ marginBottom: "1rem" }}>
         Upload your candidate CSV to run the schema and sanity validator before prediction.
