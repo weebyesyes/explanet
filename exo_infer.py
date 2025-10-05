@@ -16,7 +16,7 @@
 from __future__ import annotations
 import os, io, json, sys, math, zipfile
 from dataclasses import dataclass
-from typing import Dict, Tuple, List, Optional, Any
+from typing import Dict, Tuple, List, Optional, Any, Set
 
 import numpy as np
 import pandas as pd
@@ -96,6 +96,7 @@ def load_any_csv(path_or_bytes) -> pd.DataFrame:
 # - status: "Ready" | "Needs fixes" | "Cannot score"
 # - issues: list of {severity, code, msg, ...}
 # =====================
+MISSION_FALLBACK_NOTE = "Unrecognized/empty mission type, defaulting to TESS"
 REQUIRED = [INTERNAL["id"], INTERNAL["mission"]]
 KNOWN_MISSIONS = {"Kepler","TESS","K2"}
 
@@ -165,8 +166,8 @@ def validate_df(df: pd.DataFrame) -> Tuple[bool, Dict[str, Any]]:
                 "severity": "warn",
                 "code": "mission_missing",
                 "msg": (
-                    "Mission is empty or unknown for "
-                    f"{missing_count} rows. We'll treat them as unknown, which may impact predictions."
+                    "Mission is empty or unrecognized for "
+                    f"{missing_count} rows. Defaulting those rows to the TESS pipeline for scoring (may impact predictions)."
                 )
             })
 
@@ -464,6 +465,7 @@ class InferenceEngine:
         self.two_stage = bool(self.thr.get("two_stage", False))
         self.use_meta  = bool(self.thr.get("use_meta", False))
         self.bw        = self.thr.get("blend_weights", {"lgbm": 1.0, "cat": 0.0, "xgb": 0.0})
+        self._mission_default_ids: Set[str] = set()
 
         # Discover base models (family -> stage -> seed -> [fold paths])
         self.registry = {fam: {"A": {}, "B": {}} for fam in ["lgb", "cat", "xgb"]}
@@ -518,8 +520,10 @@ class InferenceEngine:
         }
 
         # ---- Normalize/guess mission BEFORE splitting (REPLACE PREVIOUS BLOCK) ----
+        self._mission_default_ids = set()
         parts = {}
         if INTERNAL["mission"] in df.columns:
+            df = df.copy()
             raw = df[INTERNAL["mission"]].astype(str).str.strip()
 
             # strict normalize to exactly: Kepler / TESS / K2
@@ -529,6 +533,12 @@ class InferenceEngine:
             norm[low == "kepler"] = "Kepler"
             norm[low == "tess"]   = "TESS"
             norm[low == "k2"]     = "K2"
+            
+            missing_like = low.isin({"", "nan", "none", "unknown"})
+            if missing_like.any():
+                fallback_ids = df.loc[missing_like, INTERNAL["id"]].astype(str).tolist()
+                self._mission_default_ids.update(fallback_ids)
+                norm.loc[missing_like] = "TESS"
 
             # guess from id when still not recognized
             def _guess_from_id(x):
@@ -543,6 +553,14 @@ class InferenceEngine:
             bad = ~norm.isin(KNOWN_MISSIONS)
             if bad.any():
                 norm.loc[bad] = df.loc[bad, INTERNAL["id"]].map(_guess_from_id)
+                
+            still_bad = ~norm.isin(KNOWN_MISSIONS)
+            if still_bad.any():
+                fallback_ids = df.loc[still_bad, INTERNAL["id"]].astype(str).tolist()
+                self._mission_default_ids.update(fallback_ids)
+                norm.loc[still_bad] = "TESS"
+
+            df[INTERNAL["mission"]] = norm
 
             # now split by normalized mission (no Unknown bucket)
             for mission in KNOWN_MISSIONS:
@@ -556,10 +574,14 @@ class InferenceEngine:
         else:
             # fallback: assume TESS if mission column absent
             parts = {"TESS": (df.copy(), HarmonizeSpec(src=SELF_SRC, label_map={}))}
+            if INTERNAL["id"] in df.columns:
+                self._mission_default_ids.update(df[INTERNAL["id"]].astype(str).tolist())
 
         # if nothing matched (extreme edge case), default to TESS
         if not parts:
             parts = {"TESS": (df.copy(), HarmonizeSpec(src=SELF_SRC, label_map={}))}
+            if INTERNAL["id"] in df.columns:
+                self._mission_default_ids.update(df[INTERNAL["id"]].astype(str).tolist())
 
 
         data = self.pre.transform(parts)
@@ -568,8 +590,19 @@ class InferenceEngine:
         if INTERNAL["mission"] in data.columns:
             s = data[INTERNAL["mission"]].astype(str).str.strip()
             s = s.replace({"kepler":"Kepler", "tess":"TESS", "k2":"K2"})
-            s = s.where(~s.isin({"nan","None",""}), np.nan)  # real NaN if truly missing
+            low = s.str.lower()
+            missing_like = low.isin({"nan","none","","unknown"})
+            if missing_like.any():
+                if INTERNAL["id"] in data.columns:
+                    self._mission_default_ids.update(data.loc[missing_like, INTERNAL["id"]].astype(str).tolist())
+                s.loc[missing_like] = "TESS"
             data[INTERNAL["mission"]] = s
+        else:
+            # No mission column made it through preprocessing; fabricate a TESS default.
+            mission_stub = pd.Series("TESS", index=data.index)
+            if INTERNAL["id"] in data.columns:
+                self._mission_default_ids.update(data[INTERNAL["id"]].astype(str).tolist())
+            data[INTERNAL["mission"]] = mission_stub
 
 
         # Drop any leaky columns in case user sent them; training already removed them
@@ -788,10 +821,20 @@ class InferenceEngine:
         y_idx = np.argmax(probs, axis=1)
         y_name = [self.class_names[i] for i in y_idx]
         def conf_tag(p): return "High" if p>=0.8 else ("Medium" if p>=0.6 else "Low")
+        
+        missions = data[INTERNAL["mission"]].astype(str) if INTERNAL["mission"] in data else pd.Series("TESS", index=data.index)
+        missions = missions.str.strip()
+        missions = missions.replace({"kepler": "Kepler", "tess": "TESS", "k2": "K2"})
+        lower = missions.str.lower()
+        missing_like = lower.isin({"nan", "none", "", "unknown"})
+        if missing_like.any():
+            missing_ids = data.loc[missing_like, INTERNAL["id"]].astype(str).tolist()
+            self._mission_default_ids.update(missing_ids)
+            missions.loc[missing_like] = "TESS"
 
         preds = pd.DataFrame({
             INTERNAL["id"]: data[INTERNAL["id"]].values,
-            INTERNAL["mission"]: data[INTERNAL["mission"]].values,
+            INTERNAL["mission"]: missions.values,
             "P(planet)": p_planet,
             "PredictedClass": y_name,
             "Confidence": [conf_tag(p) for p in p_planet],
@@ -806,10 +849,14 @@ class InferenceEngine:
 
         
         # Make mission printable and remove any NaN in preds
-        preds[INTERNAL["mission"]] = preds[INTERNAL["mission"]].fillna("Unknown")
+        preds[INTERNAL["mission"]] = preds[INTERNAL["mission"]].fillna("TESS")
+        if self._mission_default_ids:
+            note_col = preds[INTERNAL["id"]].astype(str).map(
+                lambda x: MISSION_FALLBACK_NOTE if x in self._mission_default_ids else None
+            )
+            if note_col.notna().any():
+                preds["MissionNote"] = note_col
         preds = preds.replace({np.nan: None})
-
-
 
         # If per-mission thresholding requested, add a binary tag computed per-row
         if per_mission_thr:
