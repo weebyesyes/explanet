@@ -517,33 +517,61 @@ class InferenceEngine:
             "snr_like": INTERNAL["snr_like"],
         }
 
+        # ---- Normalize/guess mission BEFORE splitting (REPLACE PREVIOUS BLOCK) ----
         parts = {}
-        mission_series = df[INTERNAL["mission"]] if INTERNAL["mission"] in df.columns else pd.Series(dtype=object)
         if INTERNAL["mission"] in df.columns:
-            mission_str, missing_mask, invalid_mask = _mission_status(mission_series)
-            known_mask = mission_str.isin(KNOWN_MISSIONS)
+            raw = df[INTERNAL["mission"]].astype(str).str.strip()
+
+            # strict normalize to exactly: Kepler / TESS / K2
+            norm = raw.copy()
+            low  = raw.str.lower()
+
+            norm[low == "kepler"] = "Kepler"
+            norm[low == "tess"]   = "TESS"
+            norm[low == "k2"]     = "K2"
+
+            # guess from id when still not recognized
+            def _guess_from_id(x):
+                s = str(x).upper()
+                if s.startswith("EPIC") or "K2-" in s: return "K2"
+                if "TOI" in s or "TIC" in s:          return "TESS"
+                # common Kepler styles: KOI #######, pure 7–9 digit IDs
+                if s.startswith("KOI") or (s.isdigit() and 7 <= len(s) <= 9):
+                    return "Kepler"
+                return "TESS"  # safe default
+
+            bad = ~norm.isin(KNOWN_MISSIONS)
+            if bad.any():
+                norm.loc[bad] = df.loc[bad, INTERNAL["id"]].map(_guess_from_id)
+
+            # now split by normalized mission (no Unknown bucket)
             for mission in KNOWN_MISSIONS:
-                mask = mission_str == mission
+                mask = norm == mission
                 sub = df[mask]
                 if len(sub):
                     parts[mission] = (sub.copy(), HarmonizeSpec(src=SELF_SRC, label_map={
                         PLANET: PLANET, CAND: CAND, FP: FP,
                         PLANET.upper(): PLANET, CAND.upper(): CAND, FP.upper(): FP
                     }))
-            unknown_mask = ~(known_mask)
-            if unknown_mask.any():
-                unknown = df[unknown_mask].copy()
-                parts["Unknown"] = (unknown, HarmonizeSpec(src=SELF_SRC, label_map={
-                    PLANET: PLANET, CAND: CAND, FP: FP,
-                    PLANET.upper(): PLANET, CAND.upper(): CAND, FP.upper(): FP
-                }))
+        else:
+            # fallback: assume TESS if mission column absent
+            parts = {"TESS": (df.copy(), HarmonizeSpec(src=SELF_SRC, label_map={}))}
+
+        # if nothing matched (extreme edge case), default to TESS
         if not parts:
-            # As a fallback, if user accidentally fed us “raw” mission-specific CSVs, try to guess
-            # (Not critical for app flow; you can remove this if your UI always enforces the template)
-            parts = {"Kepler": (df.copy(), HarmonizeSpec(src=SELF_SRC, label_map={}))}
+            parts = {"TESS": (df.copy(), HarmonizeSpec(src=SELF_SRC, label_map={}))}
+
+
         data = self.pre.transform(parts)
+        # Keep canonical missions; do NOT demote to NaN (we normalized before splitting)
+        # keep canonical missions; we already normalized before splitting
         if INTERNAL["mission"] in data.columns:
-            data.loc[~data[INTERNAL["mission"]].isin(KNOWN_MISSIONS), INTERNAL["mission"]] = np.nan
+            s = data[INTERNAL["mission"]].astype(str).str.strip()
+            s = s.replace({"kepler":"Kepler", "tess":"TESS", "k2":"K2"})
+            s = s.where(~s.isin({"nan","None",""}), np.nan)  # real NaN if truly missing
+            data[INTERNAL["mission"]] = s
+
+
         # Drop any leaky columns in case user sent them; training already removed them
         leaky = [c for c in data.columns if any(s in c.lower() for s in LEAKY_SUBSTRINGS)]
         keep = [c for c in data.columns if (c not in leaky) or (c == INTERNAL["label"])]
@@ -769,9 +797,18 @@ class InferenceEngine:
             "Confidence": [conf_tag(p) for p in p_planet],
         })
         
+        # ADD after creating preds DataFrame
+        preds["IsPlanet"] = (preds["P(planet)"] >= thr_used).astype(int)
+        preds["BinaryClass"] = np.where(preds["IsPlanet"] == 1, "Planet", "Not Planet")
+        preds["BinaryConfidence"] = np.where(preds["IsPlanet"] == 1,
+                                            preds["P(planet)"],
+                                            1.0 - preds["P(planet)"])
+
+        
         # Make mission printable and remove any NaN in preds
         preds[INTERNAL["mission"]] = preds[INTERNAL["mission"]].fillna("Unknown")
         preds = preds.replace({np.nan: None})
+
 
 
         # If per-mission thresholding requested, add a binary tag computed per-row
